@@ -89,7 +89,7 @@ public class Main extends Game {
         entities = Collections.synchronizedList(new ArrayList<>());
         cursor = new Cursor();
         chunks = new HashMap<>();
-        usesChunkRenderer = false;
+        usesChunkRenderer = true;
         visibleChunkObjects = Collections.synchronizedList(new ArrayList<>());
         visibleChunkObjectsTemp = Collections.synchronizedList(new ArrayList<>());
         flies = Collections.synchronizedList(new ArrayList<>());
