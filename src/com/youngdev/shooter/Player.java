@@ -5,14 +5,12 @@ import com.engine.libs.game.GameObject;
 import com.engine.libs.game.behaviors.AABBCollisionManager;
 import com.engine.libs.input.Input;
 import com.engine.libs.math.AdvancedMath;
-import com.engine.libs.rendering.Filter;
 import com.engine.libs.rendering.Renderer;
 
 import java.awt.*;
 
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.Random;
 
 public class Player extends Healable {
@@ -27,7 +25,8 @@ public class Player extends Healable {
             reloadTime = 50, bulletTimingCap = 5, leftHandBulletTimingCapCounter, leftHandBulletAmountCounter,
             rightHandBulletTimingCapCounter, rightHandBulletAmountCounter, bulletsPerShot = 5, ammo = 34, maxAmmo = 45, clip = 5, maxClip = 10, money;
     public double lastCoinX, lastCoinY, coinOverlayAlpha, coinOverlayX, coinOverlayY, clipOverlayAlpha, clipOverlayRotation, clipOverlayRotationSpeed,
-            clipOverlayRotationTarget;
+            clipOverlayRotationTarget, health, healthMax, hunger, hungerMax, statsOverlayAlpha, statsOverlayRotation, statsOverlayRotationSpeed,
+            statsOverlayRotationTarget;
     private int blinkingTime = 30;
     public int[] items;
     private String[] itemNames;
@@ -47,6 +46,11 @@ public class Player extends Healable {
         rightHandBulletAmountCounter = 0;
         leftHandBulletTimingCapCounter = 0;
         rightHandBulletTimingCapCounter = 0;
+
+        health = 100d;
+        hunger = 100d;
+        healthMax = 150d;
+        hungerMax = 150d;
 
         items = new int[5];
         itemNames = new String[] {
@@ -95,6 +99,11 @@ public class Player extends Healable {
         this.clipOverlayRotation = 0;
         this.clipOverlayRotationSpeed = 0;
         this.clipOverlayRotationTarget = 0;
+
+        this.statsOverlayAlpha = 0;
+        this.statsOverlayRotation = 0;
+        this.statsOverlayRotationSpeed = 0;
+        this.statsOverlayRotationTarget = 0;
 
         cm = new AABBCollisionManager(this, Main.collisionMap);
     }
@@ -150,8 +159,6 @@ public class Player extends Healable {
         particles.forEach(UniParticle::update);
         particles.removeIf(particle -> particle.dead);
 
-
-
         if(i.isButtonDown(1) && ammo > 0) {
             ammo--;
 //            System.out.println("Shot");
@@ -178,46 +185,6 @@ public class Player extends Healable {
 //            Main.main.camera.bluishEffect = 1f;
         }
 
-        /*if(!buildingMode) {
-            if(i.isButton(1)) {
-                int x = Math.floorDiv(i.getRelativeMouseX(), 16)*16;
-                int y = Math.floorDiv(i.getRelativeMouseY(), 16)*16;
-
-                GameObject obj = Main.main.find(x+8, y+8);
-
-                boolean pass = obj == null;
-                if(!pass) pass = (obj.getClass() != itemSamples[selectedItem].getClass());
-
-                if(pass) {
-                    try {
-                        if(obj != null) {
-                            Main.main.structuralBlocks.remove(obj);
-                        }
-                        Main.main.structuralBlocks.add(itemSamples[selectedItem].getClass().
-                                getDeclaredConstructor(int.class,int.class,int.class).
-                                newInstance(x, y, itemSamples[selectedItem].type));
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-//                Main.main.structuralBlocks.add(new StructuralBlock(x, y, StructuralBlock.TYPE_ROCKS));
-                Main.main.findOnScreenObjects();
-            } else if(i.isButton(3)) {
-                int x = Math.floorDiv(i.getRelativeMouseX(), 16)*16;
-                int y = Math.floorDiv(i.getRelativeMouseY(), 16)*16;
-                Main.main.remove(x+8, y+8);
-                Main.main.findOnScreenObjects();
-            }
-        } else if (i.isButtonDown(3)) {
-            // HERE: Shoot
-            int dir = (int) AdvancedMath.angle(xx, yy, i.getRelativeMouseX(), i.getRelativeMouseY());
-            Arrow arrow = new Arrow(xx, yy, dir + 90);
-            Main.main.entities.add(arrow);
-            Main.main.findOnScreenObjects();
-            Main.main.camera.shake(2f);
-            Main.main.camera.bluishEffect = 1f;
-        }*/
-
         boolean arrowNear = false;
         if (Main.main.entities.size() > 0) {
             for(GameObject entity : Main.main.entities) {
@@ -231,7 +198,20 @@ public class Player extends Healable {
             }
         }
 
-        if(arrowNear || inventoryOpen) {
+        boolean enemyNear = false;
+        if (Main.main.entities.size() > 0) {
+            for(GameObject obj : Main.main.entities) {
+                if(obj instanceof Healable) {
+                    if(((Healable) obj).isEnemy)
+                        if(Fly.distance(x, y, obj.x, obj.y) < 50) {
+                            enemyNear = true;
+                            break;
+                        }
+                }
+            }
+        }
+
+        if(arrowNear || enemyNear || inventoryOpen) {
             Main.slowMotionSpeed -= 0.05f;
             Main.main.camera.bluishEffect += 0.05f;
         } else {
@@ -241,15 +221,14 @@ public class Player extends Healable {
             Main.main.camera.bluishEffect -= 0.05f;
         }
 
-        Main.slowMotionSpeed = (float)AdvancedMath.setRange(Main.slowMotionSpeed, 0.25d, 1d);
+        Main.slowMotionSpeed = (float)AdvancedMath.setRange(Main.slowMotionSpeed, 0.4d, 1d);
         Main.main.camera.bluishEffect = (float)AdvancedMath.setRange(Main.main.camera.bluishEffect, 0d, 0.5d);
 
+        // HERE: Clip overlay
         coinOverlayAlpha = Math.max(0, coinOverlayAlpha-Main.toSlowMotion(2));
         coinOverlayX += (lastCoinX - coinOverlayX) * 0.1d;
         coinOverlayY += (lastCoinY - coinOverlayY) * 0.1d;
-
-        clipOverlayOpen = i.isKey(KeyEvent.VK_V);
-
+        clipOverlayOpen = i.isKey(KeyEvent.VK_V) || i.isButton(3);
         if(clipOverlayOpen) {
             clipOverlayRotationTarget = 110;
             clipOverlayAlpha += 24;
@@ -257,9 +236,20 @@ public class Player extends Healable {
             clipOverlayRotationTarget = 1;
             clipOverlayAlpha -= 24;
         }
-
         clipOverlayRotation += (clipOverlayRotationTarget - clipOverlayRotation) * 0.1d;
         clipOverlayAlpha = AdvancedMath.setRange(clipOverlayAlpha, 0, 255);
+
+        // HERE: Player stats overlay
+        boolean statsOverlayOpen = i.isButton(3);
+        if(statsOverlayOpen) {
+            statsOverlayRotationTarget = 0;
+            statsOverlayAlpha += 24;
+        } else {
+            statsOverlayRotationTarget = -90;
+            statsOverlayAlpha -= 24;
+        }
+        statsOverlayRotation += (statsOverlayRotationTarget - statsOverlayRotation) * 0.1d;
+        statsOverlayAlpha = AdvancedMath.setRange(statsOverlayAlpha, 0, 160);
 
         if(i.isKeyDown(KeyEvent.VK_R)) {
             // HERE: Reload
@@ -309,9 +299,9 @@ public class Player extends Healable {
         particles.forEach(p -> p.render(r));
         if(Main.main.showDebugInfo)
             r.fillRectangle(xx, yy, 8, 8, Color.red);
-        int x = Math.floorDiv(Main.main.getE().getInput().getRelativeMouseX(), 16)*16;
-        int y = Math.floorDiv(Main.main.getE().getInput().getRelativeMouseY(), 16)*16;
-        r.fillRectangle(x, y, 16, 16, new Color(40, 100, 70));
+//        int x = Math.floorDiv(Main.main.getE().getInput().getRelativeMouseX(), 16)*16;
+//        int y = Math.floorDiv(Main.main.getE().getInput().getRelativeMouseY(), 16)*16;
+//        r.fillRectangle(x, y, 16, 16, new Color(40, 100, 70));
     }
 
     public void renderInventory(Renderer r) {
@@ -341,61 +331,4 @@ public class Player extends Healable {
 
     }
 
-    public class PlayerParticle {
-        int x, y, dir, alpha, size, alphaSpeed;
-        double xD, yD;
-        float speed;
-        boolean dead;
-
-        Color color, baseColor = new Color(170, 32, 128);
-
-        public PlayerParticle(int x, int y, int size, int dir, float speed, int tone, int alphaSpeed) {
-            this.x = x;
-            this.y = y;
-            this.dir = dir;
-            this.speed = speed;
-            this.size = size;
-            this.dead = false;
-            this.alphaSpeed = alphaSpeed;
-            xD = x;
-            yD = y;
-            alpha = 255;
-            color = new Color(baseColor.getRed()+tone,
-                              baseColor.getGreen()+tone,
-                              baseColor.getBlue()+tone);
-        }
-
-        public void update() {
-            if(dead) return;
-//            xD += Math.cos(Math.toRadians(dir))*speed;
-//            yD += Math.sin(Math.toRadians(dir))*speed;
-
-//            speed /= 0.9;
-
-            alpha -= alphaSpeed;
-
-            if(alpha < 0) {
-                dead = true;
-                return;
-            }
-
-            this.color = new Color(
-                    calcColorParameter(Main.grassColor.getRed(), baseColor.getRed(), alpha/255f),
-                    calcColorParameter(Main.grassColor.getGreen(), baseColor.getGreen(), alpha/255f),
-                    calcColorParameter(Main.grassColor.getBlue(), baseColor.getBlue(), alpha/255f));
-//            System.out.println(color);
-
-            x = (int)xD;
-            y = (int)yD;
-        }
-
-        public int calcColorParameter(int colorBack, int colorFront, float alpha) {
-            return (int)(alpha * colorFront + (1 - alpha) * colorBack);
-        }
-
-        public void render(Renderer r) {
-            if(dead) return;
-            r.fillRectangle(x-size/2, y-size/2, size, size, color);
-        }
-    }
 }

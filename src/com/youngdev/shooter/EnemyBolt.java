@@ -119,7 +119,7 @@ public class EnemyBolt extends Healable {
             for(int k = 0; k < random.nextInt(3)+3; k++) {
                 tempList.add(new Coin((int)x, (int)y, random.nextInt(359)));
             }
-            Main.main.addEntities.addAll(tempList);
+            Main.main.coins.addAll(tempList);
         }
     }
 

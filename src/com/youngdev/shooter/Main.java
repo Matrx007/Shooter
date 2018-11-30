@@ -43,7 +43,7 @@ public class Main extends Game {
 
     public Player player;
 
-    List<GameObject> addEntities, entities, visibleChunkObjects;
+    List<GameObject> addEntities, entities, visibleChunkObjects, coins;
     private List<GameObject> structuralBlocks,visibleChunkObjectsTemp;
     List<Fly> flies;
 
@@ -69,16 +69,16 @@ public class Main extends Game {
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
 
         try {
-            ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getClassLoader().getResourceAsStream("/RETRO.ttf")));
+            ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getClassLoader().getResourceAsStream("/press-start.regular.ttf")));
         } catch (Exception ignored1) {
             try {
-                ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getResourceAsStream("/RETRO.ttf")));
+                ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getResourceAsStream("/press-start.regular.ttf")));
             } catch (Exception ignored2) {
                 try {
-                    ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getClassLoader().getResourceAsStream("RETRO.ttf")));
+                    ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getClassLoader().getResourceAsStream("press-start.regular.ttf")));
                 } catch (Exception ignored3) {
                     try {
-                        ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getResourceAsStream("RETRO.ttf")));
+                        ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getResourceAsStream("press-start.regular.ttf")));
                     } catch (Exception ignored4) {}
                 }
             }
@@ -95,6 +95,7 @@ public class Main extends Game {
         flies = Collections.synchronizedList(new ArrayList<>());
         structuralBlocks = Collections.synchronizedList(new ArrayList<>());
         addEntities = Collections.synchronizedList(new ArrayList<>());
+        coins = Collections.synchronizedList(new ArrayList<>());
         findOnScreenBlocked = false;
         findOnScreenCalled = false;
 
@@ -294,6 +295,17 @@ public class Main extends Game {
             }
         }
 
+        // HERE: Add coins
+        Iterator<GameObject> iterator1 = coins.iterator();
+        while(iterator1.hasNext()) {
+            GameObject obj = iterator1.next();
+            Point chunkLoc = getChunkLocation((int)obj.x, (int)obj.y);
+            if(isOnScreen(chunkLoc.x, chunkLoc.y, 1)) {
+                addQueue.add(obj);
+            }
+        }
+
+
         structuralBlocks.forEach(o -> {
             if(o.mask.isColliding(visibleAreaMask)) {
                 addQueue.add(o);
@@ -339,6 +351,11 @@ public class Main extends Game {
 //            entities.add(new Ghost(xx, yy));
 //            System.out.println("Ghost spawner");
         }
+
+        coins.removeIf(o -> {
+            if(!o.dead) o.update(i);
+            return o.dead;
+        });
 
         Iterator<Fly> it = flies.iterator();
         while(it.hasNext()) {
@@ -484,11 +501,11 @@ public class Main extends Game {
             double grayScaleColor = (cr+cg+cb) / 3d;
 
             cr = cr*(1-amount)+grayScaleColor*amount;
-            cg = cg*(1-(amount*0.25))+grayScaleColor*(amount*0.25);
-            cb = cb*(1-amount)+grayScaleColor*amount;
+            cg = cg*(1-amount)+grayScaleColor*amount;
+            cb = cb*(1-(amount*0.25))+grayScaleColor*(amount*0.25);
 
-            cr = Math.max(0, Math.min(255, cr*1.25));
             cg = Math.max(0, Math.min(255, cg));
+            cr = Math.max(0, Math.min(255, cr*1.25));
             cb = Math.max(0, Math.min(255, cb));
 
             return new Color((int)cr, (int)cg, (int)cb, newC.getAlpha());
@@ -550,12 +567,14 @@ public class Main extends Game {
         }
         r.setFilter(0, backup);
 
-        r.setFont(new Font("RETRO", Font.BOLD, 16));
+        r.setFont(new Font("Press Start Regular", Font.BOLD, 16));
         r.drawText(String.valueOf((int)player.money), player.coinOverlayX, player.coinOverlayY-32, 16,
                 Alignment.MIDDLE_CENTER, new Color(40, 250, 140, (int)player.coinOverlayAlpha));
 
 
 //        double mouseAngle = Fly.angle(player.x, player.y, e.getInput().getRelativeMouseX(), e.getInput().getRelativeMouseY());
+        backup = r.getFilter(0);
+        r.removeFilter(0);
         if(player.clipOverlayAlpha != 0) {
             double xx = e.getInput().getRelativeMouseX();
             double yy = e.getInput().getRelativeMouseY();
@@ -595,8 +614,33 @@ public class Main extends Game {
                 r.drawLineWidth(x1, y1, x2, y2, 1, new Color(80, 80, 64, (int) player.clipOverlayAlpha));
             }
         }
+
         r.absolute();
-//        r.fillRectangle(0, 0, e.width, e.height, new Color(64, 64, 64, 64));
+
+        if(player.statsOverlayAlpha > 0) {
+            int xx = e.getInput().getMouseX();
+            int yy = e.getInput().getMouseY();
+            int radius = 40;
+            double angle = player.health/player.healthMax*359d;
+
+            r.setColor(new Color(200, 30, 90, (int)player.statsOverlayAlpha));
+
+            Stroke previous = ((Graphics2D)r.getG()).getStroke();
+            ((Graphics2D)r.getG()).setStroke(new BasicStroke(12f));
+
+            r.getG().drawArc(xx-radius-r.getCamX(), yy-radius-r.getCamY(), radius*2, radius*2,
+                    90-(int)player.statsOverlayRotation, (int)angle);
+
+
+            r.setColor(new Color(60, 200, 90, (int)player.statsOverlayAlpha));
+            radius = 56;
+            angle = player.hunger/player.hungerMax*359d;
+            r.getG().drawArc(xx-radius-r.getCamX(), yy-radius-r.getCamY(), radius*2, radius*2,
+                    90-(int)player.statsOverlayRotation, (int)angle);
+
+            ((Graphics2D) r.getG()).setStroke(previous);
+        }
+        r.setFilter(0, backup);
 
         if(showDebugInfo) {
             int addY = 16;
