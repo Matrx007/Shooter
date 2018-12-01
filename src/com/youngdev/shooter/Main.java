@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BinaryOperator;
 
+import static com.youngdev.shooter.EnemyBolt.calcColorParameter;
 import static java.awt.event.KeyEvent.*;
 
 public class Main extends Game {
@@ -58,7 +59,7 @@ public class Main extends Game {
 
         e.width = 320;
         e.height = 240;
-        e.scale = 4f;
+        e.scale = 3f;
 
         showDebugInfo = false;
 
@@ -617,9 +618,9 @@ public class Main extends Game {
 
         r.absolute();
 
+        int xx = e.getInput().getMouseX();
+        int yy = e.getInput().getMouseY();
         if(player.statsOverlayAlpha > 0) {
-            int xx = e.getInput().getMouseX();
-            int yy = e.getInput().getMouseY();
             int radius = 40;
             double angle = player.health/player.healthMax*359d;
 
@@ -640,6 +641,23 @@ public class Main extends Game {
 
             ((Graphics2D) r.getG()).setStroke(previous);
         }
+
+        if(player.autoReloadTimer != 0) {
+            double w = player.autoReloadTimer/player.autoReloadTime*62d;
+            float alpha = (float)player.autoReloadBlinkingTimer/
+                    (float)player.autoReloadBlinkingTime;
+            Color color = new Color(
+                    calcColorParameter(128, 190, alpha),
+                    calcColorParameter(128, 210, alpha),
+                    calcColorParameter(128, 40, alpha)
+            );
+
+            r.fillRectangle(xx-32,yy+player.autoReloadY, 64, 8,
+                    Color.gray);
+
+            r.fillRectangle(xx-32+1,yy+player.autoReloadY+1, (int)w, 6, color);
+        }
+
         r.setFilter(0, backup);
 
         if(showDebugInfo) {

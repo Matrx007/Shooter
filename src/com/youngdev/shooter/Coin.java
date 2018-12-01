@@ -25,7 +25,8 @@ public class Coin extends GameObject {
         this.yD = y;
         this.angle = angle;
 
-        this.speed = random.nextDouble()+3;
+//        this.speed = 0;
+        this.speed = random.nextDouble()*3+1d;
         this.rotationSpeed = 8;
         this.rotation = random.nextInt(359);
 

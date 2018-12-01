@@ -19,20 +19,26 @@ public class Player extends Healable {
     private Random random;
     private AABBCollisionManager cm;
     boolean blinkingON;
-    private boolean found;
+    private boolean found, waitingForRelease;
     public boolean buildingMode, inventoryOpen, leftHandShooting, rightHandShooting, clipOverlayOpen;
     public int xx, yy, invSize = 24, midX, midY, selectedItem, time=60, timer, leftHandReload, rightHandReload,
             reloadTime = 50, bulletTimingCap = 5, leftHandBulletTimingCapCounter, leftHandBulletAmountCounter,
-            rightHandBulletTimingCapCounter, rightHandBulletAmountCounter, bulletsPerShot = 5, ammo = 34, maxAmmo = 45, clip = 5, maxClip = 10, money;
-    public double lastCoinX, lastCoinY, coinOverlayAlpha, coinOverlayX, coinOverlayY, clipOverlayAlpha, clipOverlayRotation, clipOverlayRotationSpeed,
-            clipOverlayRotationTarget, health, healthMax, hunger, hungerMax, statsOverlayAlpha, statsOverlayRotation, statsOverlayRotationSpeed,
-            statsOverlayRotationTarget;
+            rightHandBulletTimingCapCounter, rightHandBulletAmountCounter, bulletsPerShot = 5, ammo = 34, maxAmmo = 45,
+            clip = 5, maxClip = 10, money;
+    public double lastCoinX, lastCoinY, coinOverlayAlpha, coinOverlayX, coinOverlayY, clipOverlayAlpha,
+            clipOverlayRotation, clipOverlayRotationSpeed, clipOverlayRotationTarget, health, healthMax,
+            hunger, hungerMax, statsOverlayAlpha, statsOverlayRotation, statsOverlayRotationSpeed,
+            statsOverlayRotationTarget, autoReloadBlinkingTime, autoReloadBlinkingTimer, autoReloadTime,
+            autoReloadTimer, autoReloadMaximumAmmo, autoReloadY, autoReloadTargetY;
     private int blinkingTime = 30;
     public int[] items;
     private String[] itemNames;
     private StructuralBlock[] itemSamples;
-    private static final Color baseColor = new Color(130, 32, 78); // 170, 32, 128
+    private static Color baseColor = new Color(130, 32, 78); // 170, 32, 128
+    private static int statsReloadTargetHeight = -56-12-16;
+    private static int reloadTargetHeight = -16;
     private float speedX, targetSpeedX, speedY, targetSpeedY, maxSpeed, speedStep, blinkingTimer;
+
 
     public Player(int x, int y) {
         super(x, y, 4, 4, 200, 0, 9, false);
@@ -104,6 +110,15 @@ public class Player extends Healable {
         this.statsOverlayRotation = 0;
         this.statsOverlayRotationSpeed = 0;
         this.statsOverlayRotationTarget = 0;
+        this.waitingForRelease = false;
+
+        autoReloadBlinkingTime = 15;
+        autoReloadBlinkingTimer = 0;
+        autoReloadTime = 120;
+        autoReloadTimer = 0;
+        autoReloadMaximumAmmo = 10;
+        autoReloadY = reloadTargetHeight;
+        autoReloadTargetY = reloadTargetHeight;
 
         cm = new AABBCollisionManager(this, Main.collisionMap);
     }
@@ -159,7 +174,7 @@ public class Player extends Healable {
         particles.forEach(UniParticle::update);
         particles.removeIf(particle -> particle.dead);
 
-        if(i.isButtonDown(1) && ammo > 0) {
+        if(i.isButtonDown(1) && ammo > 0 && autoReloadTimer == 0) {
             ammo--;
 //            System.out.println("Shot");
             int addX = (int)(Math.cos(Math.toRadians(Fly.angle(x, y, i.getRelativeMouseX(), i.getRelativeMouseY())-180))*10d);
@@ -244,17 +259,50 @@ public class Player extends Healable {
         if(statsOverlayOpen) {
             statsOverlayRotationTarget = 0;
             statsOverlayAlpha += 24;
+            autoReloadTargetY = statsReloadTargetHeight;
         } else {
+            autoReloadTargetY = reloadTargetHeight;
             statsOverlayRotationTarget = -90;
             statsOverlayAlpha -= 24;
         }
         statsOverlayRotation += (statsOverlayRotationTarget - statsOverlayRotation) * 0.1d;
         statsOverlayAlpha = AdvancedMath.setRange(statsOverlayAlpha, 0, 160);
 
-        if(i.isKeyDown(KeyEvent.VK_R)) {
+        autoReloadY += (autoReloadTargetY - autoReloadY) * 0.1d;
+
+        boolean rPressed = i.isKey(KeyEvent.VK_R);
+
+        if(!rPressed) {
+            waitingForRelease = false;
+
+            if(statsOverlayOpen && ammo > autoReloadMaximumAmmo) {
+                autoReloadBlinkingTimer = 0;
+                autoReloadTimer = 0;
+            }
+        }
+
+        if((rPressed && !waitingForRelease) || statsOverlayOpen) {
             // HERE: Reload
-            clip--;
-            ammo = maxAmmo;
+            autoReloadBlinkingTimer+=Main.toSlowMotion(1d);
+            if(autoReloadBlinkingTimer >= autoReloadBlinkingTime) {
+                autoReloadBlinkingTimer = 0;
+            }
+            if(rPressed || (ammo <= autoReloadMaximumAmmo)) {
+                autoReloadTimer+=Main.toSlowMotion(1d);
+
+                if(autoReloadTimer >= autoReloadTime) {
+                    if(clip > 0) {
+                        clip--;
+                        ammo = maxAmmo;
+                        autoReloadTimer = 0;
+                        autoReloadBlinkingTimer = 0;
+                        waitingForRelease = true;
+                    }
+                }
+            }
+        } else {
+            autoReloadBlinkingTimer = 0;
+            autoReloadTimer = 0;
         }
 
 /*
