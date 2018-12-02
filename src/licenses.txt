@@ -1,4 +1,14 @@
+ F O N T S
 Most of the fonts were downloaded from Google Fonts [ https://fonts.google.com ]
-
 press-start.regular.ttf - Downloaded from 1001 Fonts [ https://www.1001fonts.com/press-start-font.html ]
 
+ M U S I C
+Music downloaded from Bensound [ https://www.bensound.com ]
+
+ S O U N D     F X
+Sound effects downloaded from freesound [ https://freesound.org ]
+
+From creators: < creator's username [ track name ] >
+ - Septem-Oxyuranus [ Airsoft Sniper Relouding & Shoting (bass) ]
+ - InspectorJ [ Footsteps, Muddy, D.wav ] and [ Footsteps, Snow, A.wav ]
+ - qubodup [ Sniper Rifle Shot [FpR3Ni1LSBg].flac ]

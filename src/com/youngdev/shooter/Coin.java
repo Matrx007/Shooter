@@ -13,7 +13,7 @@ public class Coin extends GameObject {
     public double speed, rotation, rotationSpeed, xD, yD, angle;
 
     public Coin(int x, int y, double angle) {
-        super(2, 11);
+        super(2, 8);
 
         // HERE: Fix depth
         Random random = new Random();

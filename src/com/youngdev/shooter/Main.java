@@ -12,6 +12,7 @@ import com.engine.libs.world.CollisionMap;
 import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 
 import java.awt.*;
+import java.awt.event.KeyEvent;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -29,11 +30,14 @@ public class Main extends Game {
     private static int chunkYTopLeft;
     private static int chunkXBottomRight;
     private static int chunkYBottomRight;
+    public static int width = 320;
+    public static int height = 240;
     private int timer, time=120;
     private boolean found, findOnScreenBlocked, findOnScreenCalled;
     private boolean usesChunkRenderer;
     public boolean showDebugInfo;
     public static float slowMotionSpeed = 1f;
+    public static  float mcpSlowMotionMultiplier = 1f;
     private Random random;
     public Camera camera;
     public static CollisionMap collisionMap;
@@ -56,9 +60,11 @@ public class Main extends Game {
 
     public Main() {
         main = this;
+        width = 320;
+        height = 240;
 
-        e.width = 320;
-        e.height = 240;
+        e.width = width;
+        e.height = height;
         e.scale = 3f;
 
         showDebugInfo = false;
@@ -173,7 +179,7 @@ public class Main extends Game {
                 double distance = random.nextInt(chunkSize/4)+chunkSize/4f;
                 int xxx = minX + xx + (int) (Math.cos(Math.toRadians(angle))*distance);
                 int yyy = minY + yy + (int) (Math.sin(Math.toRadians(angle))*distance);
-                entities.add(new EnemyBolt(xxx, yyy));
+//                entities.add(new EnemyBolt(xxx, yyy));
 //                flies.add(new Fly(xxx, yyy));
 //                System.out.println("Spawned a fly at ("+xxx+","+yyy+")");
             }
@@ -291,7 +297,13 @@ public class Main extends Game {
             Point chunkLoc = getChunkLocation((int)obj.x, (int)obj.y);
             if(isOnScreen(chunkLoc.x, chunkLoc.y, 2)) {
                 addQueue.add(obj);
-            } else if(!(obj instanceof Fly)) {
+
+                if(obj instanceof Healable){
+                    if(((Healable) obj).hasCollision) {
+                        collisionMap.add(obj.aabbComponent);
+                    }
+                }
+            } else {
                 iterator.remove();
             }
         }
@@ -335,6 +347,7 @@ public class Main extends Game {
 
     @Override
     public void update(Core core) {
+
         entities.addAll(addEntities);
         addEntities.clear();
 
@@ -361,6 +374,11 @@ public class Main extends Game {
         Iterator<Fly> it = flies.iterator();
         while(it.hasNext()) {
             Fly fly = it.next();
+
+            if(!isPixelOnScreen((int)fly.x, (int)fly.y, 4)) {
+                fly.dead = true;
+            }
+
             if(fly.dead) {
                 it.remove();
             } else {
@@ -412,15 +430,29 @@ public class Main extends Game {
             showDebugInfo = !showDebugInfo;
         }
 
+        if(i.isKeyDown(VK_F1)) {
+            camera.target = player;
+        }
+
+        if(i.isKeyDown(VK_F3)) {
+            for(GameObject obj : entities) {
+                if(obj.mask.isColliding(i.getRelativeMouseX(), i.getRelativeMouseY())) {
+                    camera.target = obj;
+                }
+            }
+        }
+
         if(i.isKeyDown(VK_F4)) {
             entities.clear();
         }
 
         if(i.isButtonDown(2)) {
-            Arrow arrow = new Arrow(i.getRelativeMouseX(), i.getRelativeMouseY(),
-                    (int)Fly.angle(i.getRelativeMouseX(), i.getRelativeMouseY(), player.x, player.y)-180);
-            arrow.shotByFriendly = false;
-            entities.add(arrow);
+//            Arrow arrow = new Arrow(i.getRelativeMouseX(), i.getRelativeMouseY(),
+//                    (int)Fly.angle(i.getRelativeMouseX(), i.getRelativeMouseY(), player.x, player.y)-180);
+//            arrow.shotByFriendly = false;
+            GameObject bunny = new Bunny(i.getRelativeMouseX(), i.getRelativeMouseY());
+            entities.add(bunny);
+//            camera.target = bunny;
         }
 
 
@@ -465,11 +497,11 @@ public class Main extends Game {
     }
 
     public static int toSlowMotion(int amount) {
-        return (int)(amount*slowMotionSpeed);
+        return (int)(amount*slowMotionSpeed*mcpSlowMotionMultiplier);
     }
 
     public static double toSlowMotion(double amount) {
-        return amount*slowMotionSpeed;
+        return amount*slowMotionSpeed*mcpSlowMotionMultiplier;
     }
 
     @Override
@@ -483,7 +515,7 @@ public class Main extends Game {
             int cg = newC.getGreen();
             int cb = newC.getBlue();
 
-            int grayScaleColor = (int)(((double)(cr+cg+cb))/3d);
+            int grayScaleColor = (int) (((double) (cr + cg + cb)) / 3d);
 
             cr = grayScaleColor;
             cg = grayScaleColor;
@@ -499,17 +531,17 @@ public class Main extends Game {
             double cg = newC.getGreen() * (1 - 0.45 * amount);
             double cb = newC.getBlue() * (1 - 0.45 * amount);
 
-            double grayScaleColor = (cr+cg+cb) / 3d;
+            double grayScaleColor = (cr + cg + cb) / 3d;
 
-            cr = cr*(1-amount)+grayScaleColor*amount;
-            cg = cg*(1-amount)+grayScaleColor*amount;
-            cb = cb*(1-(amount*0.25))+grayScaleColor*(amount*0.25);
+            cr = cr * (1 - amount) + grayScaleColor * amount;
+            cg = cg * (1 - amount) + grayScaleColor * amount;
+            cb = cb * (1 - (amount * 0.25)) + grayScaleColor * (amount * 0.25);
 
             cg = Math.max(0, Math.min(255, cg));
-            cr = Math.max(0, Math.min(255, cr*1.25));
+            cr = Math.max(0, Math.min(255, cr * 1.25));
             cb = Math.max(0, Math.min(255, cb));
 
-            return new Color((int)cr, (int)cg, (int)cb, newC.getAlpha());
+            return new Color((int) cr, (int) cg, (int) cb, newC.getAlpha());
         };
 
         r.setFilter(0, slowMotionOverlay);
@@ -530,14 +562,14 @@ public class Main extends Game {
         r.fillRectangle(0, 0, e.width, e.height, grassColor);
 
         r.relative();
-        if(showDebugInfo)
-            r.fillRectangle(hoverChunkX*chunkSize, hoverChunkY*chunkSize, chunkSize, chunkSize, new Color(40, 100, 70));
+        if (showDebugInfo)
+            r.fillRectangle(hoverChunkX * chunkSize, hoverChunkY * chunkSize, chunkSize, chunkSize, new Color(40, 100, 70));
 
-        if(usesChunkRenderer) {
+        if (usesChunkRenderer) {
             // HERE: Render only visible chunks
 
             Iterator<GameObject> it;
-            for(it = Main.main.visibleChunkObjects.iterator(); it.hasNext();) {
+            for (it = Main.main.visibleChunkObjects.iterator(); it.hasNext(); ) {
                 it.next().render(r);
             }
 //            visibleChunkObjects.forEach(obj -> obj.render(r));
@@ -555,9 +587,9 @@ public class Main extends Game {
         // HERE: Render nearby bullet warnings
         Filter backup = r.getFilter(0);
         r.removeFilter(0);
-        if(player.blinkingON) {
+        if (player.blinkingON) {
             Iterator<GameObject> it;
-            for(it = Main.main.visibleChunkObjects.iterator(); it.hasNext();) {
+            for (it = Main.main.visibleChunkObjects.iterator(); it.hasNext(); ) {
                 GameObject obj = it.next();
                 if (obj instanceof Arrow)
                     if (!((Arrow) obj).shotByFriendly)
@@ -569,17 +601,17 @@ public class Main extends Game {
         r.setFilter(0, backup);
 
         r.setFont(new Font("Press Start Regular", Font.BOLD, 16));
-        r.drawText(String.valueOf((int)player.money), player.coinOverlayX, player.coinOverlayY-32, 16,
-                Alignment.MIDDLE_CENTER, new Color(40, 250, 140, (int)player.coinOverlayAlpha));
+        r.drawText(String.valueOf((int) player.money), player.coinOverlayX, player.coinOverlayY - 32, 16,
+                Alignment.MIDDLE_CENTER, new Color(40, 250, 140, (int) player.coinOverlayAlpha));
 
 
 //        double mouseAngle = Fly.angle(player.x, player.y, e.getInput().getRelativeMouseX(), e.getInput().getRelativeMouseY());
         backup = r.getFilter(0);
         r.removeFilter(0);
-        if(player.clipOverlayAlpha != 0) {
+        if (player.clipOverlayAlpha != 0) {
             double xx = e.getInput().getRelativeMouseX();
             double yy = e.getInput().getRelativeMouseY();
-            double step1 = 360d / player.maxClip;
+            double step1 = 360d / 10d;
             double addAngle = player.clipOverlayRotation;
             for (int i = 0; i < player.clip; i++) {
                 double angle = step1 * i + addAngle;
@@ -599,7 +631,7 @@ public class Main extends Game {
 
                 r.fillPolygon(new double[]{x1, x2, x3, x4}, new double[]{y1, y2, y3, y4}, new Color(64, 64, 64, (int) player.clipOverlayAlpha));
             }
-            double step2 = 360d/player.maxAmmo;
+            double step2 = 360d / player.maxAmmo;
             for (int i = 0; i < player.ammo; i++) {
                 double angle = step2 * i + addAngle / 1.5d;
 //            System.out.println("XX: "+xx);
@@ -620,47 +652,47 @@ public class Main extends Game {
 
         int xx = e.getInput().getMouseX();
         int yy = e.getInput().getMouseY();
-        if(player.statsOverlayAlpha > 0) {
+        if (player.statsOverlayAlpha > 0) {
             int radius = 40;
-            double angle = player.health/player.healthMax*359d;
+            double angle = player.health / player.healthMax * 359d;
 
-            r.setColor(new Color(200, 30, 90, (int)player.statsOverlayAlpha));
+            r.setColor(new Color(200, 30, 90, (int) player.statsOverlayAlpha));
 
-            Stroke previous = ((Graphics2D)r.getG()).getStroke();
-            ((Graphics2D)r.getG()).setStroke(new BasicStroke(12f));
+            Stroke previous = ((Graphics2D) r.getG()).getStroke();
+            ((Graphics2D) r.getG()).setStroke(new BasicStroke(12f));
 
-            r.getG().drawArc(xx-radius-r.getCamX(), yy-radius-r.getCamY(), radius*2, radius*2,
-                    90-(int)player.statsOverlayRotation, (int)angle);
+            r.getG().drawArc(xx - radius - r.getCamX(), yy - radius - r.getCamY(), radius * 2, radius * 2,
+                    90 - (int) player.statsOverlayRotation, (int) angle);
 
 
-            r.setColor(new Color(60, 200, 90, (int)player.statsOverlayAlpha));
+            r.setColor(new Color(60, 200, 90, (int) player.statsOverlayAlpha));
             radius = 56;
-            angle = player.hunger/player.hungerMax*359d;
-            r.getG().drawArc(xx-radius-r.getCamX(), yy-radius-r.getCamY(), radius*2, radius*2,
-                    90-(int)player.statsOverlayRotation, (int)angle);
+            angle = player.hunger / player.hungerMax * 359d;
+            r.getG().drawArc(xx - radius - r.getCamX(), yy - radius - r.getCamY(), radius * 2, radius * 2,
+                    90 - (int) player.statsOverlayRotation, (int) angle);
 
             ((Graphics2D) r.getG()).setStroke(previous);
         }
 
-        if(player.autoReloadTimer != 0) {
-            double w = player.autoReloadTimer/player.autoReloadTime*62d;
-            float alpha = (float)player.autoReloadBlinkingTimer/
-                    (float)player.autoReloadBlinkingTime;
+        if (player.autoReloadTimer != 0) {
+            double w = player.autoReloadTimer / player.autoReloadTime * 62d;
+            float alpha = (float) player.autoReloadBlinkingTimer /
+                    (float) player.autoReloadBlinkingTime;
             Color color = new Color(
                     calcColorParameter(128, 190, alpha),
                     calcColorParameter(128, 210, alpha),
                     calcColorParameter(128, 40, alpha)
             );
 
-            r.fillRectangle(xx-32,yy+player.autoReloadY, 64, 8,
+            r.fillRectangle(xx - 32, yy + player.autoReloadY, 64, 8,
                     Color.gray);
 
-            r.fillRectangle(xx-32+1,yy+player.autoReloadY+1, (int)w, 6, color);
+            r.fillRectangle(xx - 32 + 1, yy + player.autoReloadY + 1, (int) w, 6, color);
         }
 
         r.setFilter(0, backup);
 
-        if(showDebugInfo) {
+        if (showDebugInfo) {
             int addY = 16;
             int y = 8;
             r.setFont(new Font("Arial", Font.PLAIN, 10));
@@ -690,19 +722,16 @@ public class Main extends Game {
             r.drawText("PlayerX: " + player.xx, 8, y, 10, Color.black);
             y += addY;
             r.drawText("PlayerY: " + player.yy, 8, y, 10, Color.black);
+
+            y += addY;
+            r.drawText("Generated chunks: " + chunks.size(), 8, y, 10, Color.black);
+            y += addY;
+            r.drawText("Flies: " + flies.size(), 8, y, 10, Color.black);
         }
         r.relative();
 
         cursor.render(r);
 
-        /*r.removeFilter(0);
-
-        r.absolute();
-
-        if(player.inventoryOpen)
-            player.renderInventory(r);
-
-        r.relative();*/
-
+        r.clearFilters();
     }
 }

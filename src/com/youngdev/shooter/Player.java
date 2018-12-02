@@ -24,7 +24,7 @@ public class Player extends Healable {
     public int xx, yy, invSize = 24, midX, midY, selectedItem, time=60, timer, leftHandReload, rightHandReload,
             reloadTime = 50, bulletTimingCap = 5, leftHandBulletTimingCapCounter, leftHandBulletAmountCounter,
             rightHandBulletTimingCapCounter, rightHandBulletAmountCounter, bulletsPerShot = 5, ammo = 34, maxAmmo = 45,
-            clip = 5, maxClip = 10, money;
+            clip = 10, money;
     public double lastCoinX, lastCoinY, coinOverlayAlpha, coinOverlayX, coinOverlayY, clipOverlayAlpha,
             clipOverlayRotation, clipOverlayRotationSpeed, clipOverlayRotationTarget, health, healthMax,
             hunger, hungerMax, statsOverlayAlpha, statsOverlayRotation, statsOverlayRotationSpeed,
@@ -41,7 +41,7 @@ public class Player extends Healable {
 
 
     public Player(int x, int y) {
-        super(x, y, 4, 4, 200, 0, 9, false);
+        super(x, y, 4, 4, 200, 0, 10, false, false);
         particles = new ArrayList<>();
 
         leftHandReload = 0;
@@ -52,6 +52,9 @@ public class Player extends Healable {
         rightHandBulletAmountCounter = 0;
         leftHandBulletTimingCapCounter = 0;
         rightHandBulletTimingCapCounter = 0;
+
+        lastCoinX = x;
+        lastCoinY = y-256;
 
         health = 100d;
         hunger = 100d;
@@ -281,7 +284,7 @@ public class Player extends Healable {
             }
         }
 
-        if((rPressed && !waitingForRelease) || statsOverlayOpen) {
+        if(clip > 0 && ((rPressed && !waitingForRelease) || statsOverlayOpen)) {
             // HERE: Reload
             autoReloadBlinkingTimer+=Main.toSlowMotion(1d);
             if(autoReloadBlinkingTimer >= autoReloadBlinkingTime) {

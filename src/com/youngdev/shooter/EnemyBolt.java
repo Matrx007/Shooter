@@ -25,7 +25,7 @@ public class EnemyBolt extends Healable {
     private ArrayList<UniParticle> particles;
 
     public EnemyBolt(int x, int y) {
-        super(x, y, 32, 32, 50, 3, 12, true);
+        super(x, y, 32, 32, 50, 3, 12, true, false);
         random = new Random();
         this.dir = random.nextDouble()*360;
         maxSpeed = 3f;

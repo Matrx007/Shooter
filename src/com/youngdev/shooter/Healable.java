@@ -9,16 +9,17 @@ import java.util.Random;
 
 public abstract class Healable extends GameObject {
     public int health;
-    private Random random;
-    public boolean isEnemy;
+    public Random random;
+    public boolean isEnemy, hasCollision;
 
-    public Healable(int x, int y, int w, int h, int health, int index, int depth, boolean isEnemy) {
+    public Healable(int x, int y, int w, int h, int health, int index, int depth, boolean isEnemy, boolean hasCollision) {
         super(index, depth);
         this.x = x;
         this.y = y;
         this.isEnemy = isEnemy;
         this.mask = new Mask.Rectangle(x-w/2d, y-h/2d, w, h);
         this.health = health;
+        this.hasCollision = hasCollision;
 
         // HERE: Fix depth
         this.random = new Random();
