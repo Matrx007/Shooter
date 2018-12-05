@@ -29,17 +29,21 @@ public class Camera {
     }
 
     public void update() {
-        if(shakeAmount != 0) {
-            shakeX = Main.toSlowMotion(random.nextFloat() * shakeAmount * 2 - shakeAmount);
-            shakeY = Main.toSlowMotion(random.nextFloat() * shakeAmount * 2 - shakeAmount);
-            shakeAmount *= Main.toSlowMotion(0.9f);
+        if(Main.startMenuMode) {
+            cY -= 0.5;
         } else {
-            shakeX = 0;
-            shakeY = 0;
-        }
+            if (shakeAmount != 0) {
+                shakeX = Main.toSlowMotion(random.nextFloat() * shakeAmount * 2 - shakeAmount);
+                shakeY = Main.toSlowMotion(random.nextFloat() * shakeAmount * 2 - shakeAmount);
+                shakeAmount *= Main.toSlowMotion(0.9f);
+            } else {
+                shakeX = 0;
+                shakeY = 0;
+            }
 
-        cX += Main.toSlowMotion((target.x - cX - width/2d) * 0.1d);
-        cY += Main.toSlowMotion((target.y - cY - height/2d) * 0.1d);
+            cX += Main.toSlowMotion((target.x - cX - width / 2d) * 0.1d);
+            cY += Main.toSlowMotion((target.y - cY - height / 2d) * 0.1d);
+        }
     }
 
     public void shake(float amount) {

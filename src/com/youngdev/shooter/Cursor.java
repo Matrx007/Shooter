@@ -10,14 +10,19 @@ import java.util.Random;
 public class Cursor {
     public ArrayList<UniParticle> particles;
     private Random random;
+    public Color cursorColor;
+    public boolean visible;
 
     public Cursor() {
         particles = new ArrayList<>();
         random = new Random();
+        cursorColor = new Color(164, 170, 46);
+        visible = true;
     }
 
     public void update(Input i) {
-        createParticle(i);
+        if(visible)
+            createParticle(i);
 
         if(i.isButtonDown(1)) {
 //            leaf.clear();
@@ -43,7 +48,9 @@ public class Cursor {
         alpha = 255;
         int alphaSpeed = 16;
         int size = (random.nextInt(2)+1)*2;
-        Color color = new Color(164+tone, 170+tone, 46+tone);
+        Color color = new Color(cursorColor.getRed()+tone,
+                cursorColor.getGreen()+tone,
+                cursorColor.getBlue()+tone);
         UniParticle.FadingProcess fadingProcess = new UniParticle.FadingProcess(alpha, alphaSpeed, true);
         particles.add(new UniParticle(xx, yy, size, false, color, fadingProcess));
 

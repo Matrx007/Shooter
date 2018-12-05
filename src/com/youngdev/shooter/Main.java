@@ -5,14 +5,20 @@ import com.engine.Game;
 import com.engine.libs.font.Alignment;
 import com.engine.libs.game.GameObject;
 import com.engine.libs.game.Mask;
+import com.engine.libs.game.behaviors.AABBCollisionManager;
+import com.engine.libs.game.behaviors.AABBComponent;
 import com.engine.libs.input.Input;
+import com.engine.libs.math.AdvancedMath;
 import com.engine.libs.rendering.Filter;
+import com.engine.libs.rendering.RenderUtils;
 import com.engine.libs.rendering.Renderer;
 import com.engine.libs.world.CollisionMap;
 import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
+import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -41,6 +47,15 @@ public class Main extends Game {
     private Random random;
     public Camera camera;
     public static CollisionMap collisionMap;
+    public static boolean startMenuMode = false;
+    private BufferedImage gameLogo;
+    private BufferedImage gameLogoMask;
+    private int numButtons;
+    private String[] buttonLabels;
+    private int[] buttonStates;
+    private BufferedImage[] buttonImages;
+    private ArrayList<UniParticle> startMenuButtonParticles;
+    public Hut hut;
 
     public Cursor cursor;
 
@@ -72,20 +87,25 @@ public class Main extends Game {
         e.start();
 
         // HERE: Init
+        AABBCollisionManager.MAX_UNSTUCK_TRIES = 32;
 
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
 
         try {
             ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getClassLoader().getResourceAsStream("/press-start.regular.ttf")));
+            ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getClassLoader().getResourceAsStream("/Nunito-Bold.ttf")));
         } catch (Exception ignored1) {
             try {
                 ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getResourceAsStream("/press-start.regular.ttf")));
+                ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getResourceAsStream("/Nunito-Bold.ttf")));
             } catch (Exception ignored2) {
                 try {
                     ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getClassLoader().getResourceAsStream("press-start.regular.ttf")));
+                    ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getClassLoader().getResourceAsStream("Nunito-Bold.ttf")));
                 } catch (Exception ignored3) {
                     try {
                         ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getResourceAsStream("press-start.regular.ttf")));
+                        ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getResourceAsStream("Nunito-Bold.ttf")));
                     } catch (Exception ignored4) {}
                 }
             }
@@ -111,6 +131,7 @@ public class Main extends Game {
         e.getRenderer().setCamY(Integer.MAX_VALUE/2-e.height/2);
         player = new Player(e.getRenderer().getCamX()+e.width/2,
                 e.getRenderer().getCamY()+e.height/2);
+        hut = new Hut((int)player.x, (int)player.y);
 
         camera = new Camera(e.width, e.height, player);
 
@@ -118,6 +139,66 @@ public class Main extends Game {
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
         g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
         g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+
+        // HERE: Pre-Render game logo
+        gameLogo = RenderUtils.createImage(e.width, 48, false);
+        Graphics2D g2 = (Graphics2D) gameLogo.getGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
+                RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
+
+        Container contentPane = e.getWindow().getFrame().getContentPane();
+        contentPane.setCursor(contentPane.getToolkit().createCustomCursor(
+                new BufferedImage( 1, 1, BufferedImage.TYPE_INT_ARGB ),
+                new Point(),
+                null ));
+
+        String text = "Go huntin'";
+
+//        g2.setColor(new Color());
+//        g2.fill;
+        GradientPaint gradientPaint = new GradientPaint(0, 0, grassColor,
+                0, gameLogo.getHeight(), new Color(
+                        grassColor.getRed(),
+                        grassColor.getGreen(),
+                        grassColor.getBlue(),
+                        0
+        ));
+        g2.setPaint(gradientPaint);
+        g2.fillRect(0, 0, gameLogo.getWidth(), gameLogo.getHeight());
+        g2.setPaint(null);
+        g2.setStroke(new BasicStroke(4f));
+        g2.setFont(new Font("Nunito Bold", Font.PLAIN, 24));
+
+        FontMetrics fontMetrics = g2.getFontMetrics();
+        Rectangle2D textBounds = fontMetrics.getStringBounds(text, g2);
+
+        g2.setColor(Color.black);
+        g2.drawString(text, (int)(gameLogo.getWidth()-textBounds.getWidth())/2,
+                32);
+
+        buttonLabels = new String[] {
+                "Play",
+                "Credits",
+                "Rage Quit"
+        };
+        numButtons = 3;
+        buttonImages = new BufferedImage[numButtons];
+
+        startMenuButtonParticles = new ArrayList<>();
+
+        for(int i = 0; i < numButtons; i++) {
+            BufferedImage image = RenderUtils.createImage(96, 24);
+            Graphics2D g = (Graphics2D) image.getGraphics();
+            g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
+                    RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
+
+            g.setStroke(new BasicStroke(2f));
+            g.setColor(Color.black);
+            g.setFont(new Font("Nunito Bold", Font.PLAIN, 16));
+            g.drawString(buttonLabels[i], 8, 16);
+
+            buttonImages[i] = image;
+        }
 
         e.run();
     }
@@ -134,6 +215,9 @@ public class Main extends Game {
 
         int minX = x*chunkSize;
         int minY = y*chunkSize;
+
+        if(new Rectangle(minX, minY, chunkSize, chunkSize).
+                intersects(new Rectangle((int)hut.x, (int)hut.y, hut.w, hut.h))) return;
 
         for(int i = 0; i < random.nextInt(4); i++) {
             chunk.add(new Tree(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY));
@@ -161,7 +245,7 @@ public class Main extends Game {
         if(random.nextInt(5)==3) {
             int xx = random.nextInt(chunkSize);
             int yy = random.nextInt(chunkSize);
-            for(int i = 0; i < random.nextInt(4)+3; i++) {
+            for(int i = 0; i < random.nextInt(18)+3; i++) {
                 double angle = random.nextInt(359);
                 double distance = random.nextInt(chunkSize/4)+chunkSize/4f;
                 int xxx = minX + xx + (int) (Math.cos(Math.toRadians(angle))*distance);
@@ -169,6 +253,10 @@ public class Main extends Game {
                 flies.add(new Fly(xxx, yyy));
 //                System.out.println("Spawned a fly at ("+xxx+","+yyy+")");
             }
+        }
+
+        if(random.nextInt(6)==2) {
+            entities.add(new Bunny(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY));
         }
 
         if(random.nextInt(7)==3) {
@@ -248,7 +336,10 @@ public class Main extends Game {
         collisionMap.empty();
         ArrayList<GameObject> visibleChunksObjectsTemporary = new ArrayList<>();
         ArrayList<GameObject> addQueue = new ArrayList<>();
-        addQueue.add(player);
+        if(!startMenuMode) {
+            addQueue.add(player);
+            addQueue.add(hut);
+        }
 
         // HERE: Add chunks that are inside screen to visibleChunkObjects list
         for(int xx = chunkXTopLeft; xx < chunkXBottomRight; xx++) {
@@ -347,6 +438,87 @@ public class Main extends Game {
 
     @Override
     public void update(Core core) {
+        boolean startMenuModePrev = startMenuMode;
+
+        if(startMenuMode) {
+            boolean found = false;
+            camera.bluishEffect = 0f;
+            int x = core.getInput().getMouseX();
+            int y = core.getInput().getMouseY();
+            int alphaSpeed = 32;
+            for(int i = 0; i < numButtons; i++) {
+                int xx = 16;
+                int yy = 64+32*i;
+                if(AdvancedMath.inRange(x, y, xx, yy, 96, 24)) {
+                    found = true;
+                    for(int t0 = 0; t0 < 4; t0++) {
+                        int x1 = random.nextInt(96);
+                        int x2 = random.nextInt(96);
+
+                        {
+                            // HERE: Top side
+                            Color color = new Color(
+                                    cursor.cursorColor.getRed()+random.nextInt(20),
+                                    cursor.cursorColor.getGreen()+random.nextInt(20),
+                                    cursor.cursorColor.getBlue()+random.nextInt(20)
+                            );
+                            UniParticle.FadingProcess fadingProcess =
+                                    new UniParticle.FadingProcess(255, alphaSpeed, true);
+                            startMenuButtonParticles.add(new UniParticle(xx+x1, yy, random.nextBoolean() ? 2 : 4, false,
+                                    color, fadingProcess));
+                        }
+                        {
+                            // HERE: Bottom side
+                            Color color = new Color(
+                                    cursor.cursorColor.getRed()+random.nextInt(20),
+                                    cursor.cursorColor.getGreen()+random.nextInt(20),
+                                    cursor.cursorColor.getBlue()+random.nextInt(20)
+                            );
+                            UniParticle.FadingProcess fadingProcess =
+                                    new UniParticle.FadingProcess(255, alphaSpeed, true);
+                            startMenuButtonParticles.add(new UniParticle(xx+x2, yy+24, random.nextBoolean() ? 2 : 4, false,
+                                    color, fadingProcess));
+                        }
+                    }
+                    int y1 = random.nextInt(24);
+                    int y2 = random.nextInt(24);
+                    {
+                        // HERE: Left side
+                        Color color = new Color(
+                                cursor.cursorColor.getRed()+random.nextInt(20),
+                                cursor.cursorColor.getGreen()+random.nextInt(20),
+                                cursor.cursorColor.getBlue()+random.nextInt(20)
+                        );
+                        UniParticle.FadingProcess fadingProcess =
+                                new UniParticle.FadingProcess(255, alphaSpeed, true);
+                        startMenuButtonParticles.add(new UniParticle(xx, yy+y1, random.nextBoolean() ? 2 : 4, false,
+                                color, fadingProcess));
+                    }
+                    {
+                        // HERE: Right side
+                        Color color = new Color(
+                                cursor.cursorColor.getRed()+random.nextInt(20),
+                                cursor.cursorColor.getGreen()+random.nextInt(20),
+                                cursor.cursorColor.getBlue()+random.nextInt(20)
+                        );
+                        UniParticle.FadingProcess fadingProcess =
+                                new UniParticle.FadingProcess(255, alphaSpeed, true);
+                        startMenuButtonParticles.add(new UniParticle(xx+96, yy+y2, random.nextBoolean() ? 2 : 4, false,
+                                color, fadingProcess));
+                    }
+                }
+                cursor.visible = !found;
+            }
+
+            startMenuButtonParticles.removeIf(p -> {
+                if(p.dead) {
+                    return true;
+                } else {
+                    p.update();
+                    return false;
+                }
+            });
+        }
 
         entities.addAll(addEntities);
         addEntities.clear();
@@ -396,7 +568,9 @@ public class Main extends Game {
             }
         }
 
-        player.update(core.getInput());
+
+        if(!startMenuMode)
+            player.update(core.getInput());
         Iterator<GameObject> it3;
         for(it3 = Main.main.visibleChunkObjects.iterator(); it3.hasNext();) {
             GameObject obj = it3.next();
@@ -494,6 +668,17 @@ public class Main extends Game {
 
         findOnScreenBlocked = false;
         if(findOnScreenCalled) findOnScreenObjects();
+
+        if(startMenuModePrev != startMenuMode) {
+            if(startMenuMode) {
+                // HERE: Go to start menu mode
+                camera.cX =(int)(Integer.MAX_VALUE/8d*7d);
+                camera.cY =(int)(Integer.MAX_VALUE/8d*7d);
+            } else {
+                // HERE: Exit start menu mode
+                cursor.visible = true;
+            }
+        }
     }
 
     public static int toSlowMotion(int amount) {
@@ -729,9 +914,23 @@ public class Main extends Game {
             r.drawText("Flies: " + flies.size(), 8, y, 10, Color.black);
         }
         r.relative();
-
-        cursor.render(r);
-
         r.clearFilters();
+
+        if(startMenuMode) {
+            r.absolute();
+            r.drawImage(0, 0, gameLogo);
+
+            // HERE: Render buttons
+            int y = 64;
+            int x = 16;
+            for(int i = 0; i < numButtons; i++) {
+                r.drawImage(x, y, buttonImages[i]);
+                y += 32;
+            }
+            startMenuButtonParticles.forEach(p -> p.render(r));
+        }
+
+        r.relative();
+        cursor.render(r);
     }
 }

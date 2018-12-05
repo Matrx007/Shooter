@@ -51,7 +51,12 @@ public class Bunny extends Healable {
             speedTarget = maxSpeed;
         } else {
             if(movingTime < 0) {
-                directionTarget = random.nextInt(359);
+                if(random.nextInt(5)==1) {
+                    directionTarget = random.nextInt(359);
+                } else {
+                    directionTarget += random.nextInt(180)-90;
+                }
+//                directionTarget = random.nextInt(359);
                 speedTarget = maxSpeed*0.5d + maxSpeed*random.nextDouble()*0.5d;
                 movingTime = random.nextInt(60)+15;
             } else {
@@ -88,8 +93,8 @@ public class Bunny extends Healable {
         double[][] points = new double[][]{
                 rotatePoint(x-8, y-12, x, y, direction+90),
                 rotatePoint(x+8, y-12, x, y, direction+90),
-                rotatePoint(x+8, y+12, x, y, direction+90),
-                rotatePoint(x-8, y+12, x, y, direction+90)
+                rotatePoint(x+8, y+8, x, y, direction+90),
+                rotatePoint(x-8, y+8, x, y, direction+90)
         };
 //        Color c = Main.collisionMap.collisionWithExcept(mask, aabbComponent) ? Color.black : new Color(240, 240,240);
         fillPoly(points, new Color(240, 240,240), r);
@@ -198,22 +203,22 @@ public class Bunny extends Healable {
         fillPoly(points, new Color(190, 190,190), r);
 
         points = new double[][]{
-                rotatePoint(x-4, y+12-4, x, y, direction+90),
-                rotatePoint(x+4, y+12-4, x, y, direction+90),
-                rotatePoint(x+4, y+12+4, x, y, direction+90),
-                rotatePoint(x-4, y+13+4, x, y, direction+90)
+                rotatePoint(x-4, y+8-4, x, y, direction+90),
+                rotatePoint(x+4, y+8-4, x, y, direction+90),
+                rotatePoint(x+4, y+8+4, x, y, direction+90),
+                rotatePoint(x-4, y+8+4, x, y, direction+90)
         };
         fillPoly(points, new Color(220, 220,220), r);
 
         if(Main.main.showDebugInfo) {
             r.fillRectangle(mask.x, mask.y, ((Mask.Rectangle)mask).w, ((Mask.Rectangle)mask).h, Color.red);
 
-            int w = ((Mask.Rectangle) aabbComponent.area).w;
-            int h = ((Mask.Rectangle) aabbComponent.area).h;
-            r.fillCircle(aabbComponent.area.x, aabbComponent.area.y, 3, Color.blue);
-            r.fillCircle(aabbComponent.area.x+w, aabbComponent.area.y, 3, Color.blue);
-            r.fillCircle(aabbComponent.area.x+w, aabbComponent.area.y+h, 3, Color.blue);
-            r.fillCircle(aabbComponent.area.x, aabbComponent.area.y+h, 3, Color.blue);
+//            int w = ((Mask.Rectangle) aabbComponent.area).w;
+//            int h = ((Mask.Rectangle) aabbComponent.area).h;
+//            r.fillCircle(aabbComponent.area.x, aabbComponent.area.y, 3, Color.blue);
+//            r.fillCircle(aabbComponent.area.x+w, aabbComponent.area.y, 3, Color.blue);
+//            r.fillCircle(aabbComponent.area.x+w, aabbComponent.area.y+h, 3, Color.blue);
+//            r.fillCircle(aabbComponent.area.x, aabbComponent.area.y+h, 3, Color.blue);
         }
     }
 
@@ -238,7 +243,7 @@ public class Bunny extends Healable {
         r.fillPolygon(xPoints, yPoints, points.length, color);
     }
 
-    public double[] rotatePoint(double x, double y, double anchorX, double anchorY, double degrees) {
+    public static double[] rotatePoint(double x, double y, double anchorX, double anchorY, double degrees) {
         double xx = (x - anchorX) * Math.cos(degrees * Math.PI / 180) - (y - anchorY) * Math.sin(degrees * Math.PI / 180) + anchorX;
         double yy = (x - anchorX) * Math.sin(degrees * Math.PI / 180) + (y - anchorY) * Math.cos(degrees * Math.PI / 180) + anchorY;
         return new double[]{xx, yy};
