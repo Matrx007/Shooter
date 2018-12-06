@@ -4,7 +4,6 @@ import com.engine.libs.game.GameObject;
 import com.engine.libs.game.Mask;
 import com.engine.libs.game.behaviors.AABBComponent;
 import com.engine.libs.input.Input;
-import com.engine.libs.math.BasicMath;
 import com.engine.libs.rendering.Renderer;
 
 import java.awt.*;
@@ -12,76 +11,45 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
 
-public class Tree extends GameObject {
+public class Bush extends GameObject {
 
     private ArrayList<Leaf> leaf;
-    private ArrayList<Point[]> brunches;
     private Random random;
     private boolean prevCollision, fliesInside;
-    private int type;
-    public static final int TYPE_SAVANNA = 0, TYPE_OAK = 1;
 
-    public Tree(int x, int y) {
-        super(11, 20);
+    public Bush(int x, int y) {
+        super(11, 6);
         this.x = x;
         this.y = y;
         this.fliesInside = true;
+        this.solid = true;
 
         // HERE: Fix depth
         this.random = new Random();
         this.depth = random.nextInt(1023)+depth*1024;
 
         leaf = new ArrayList<>();
-        brunches = new ArrayList<>();
-        type = random.nextBoolean() ? TYPE_SAVANNA : TYPE_OAK;
+
 
         // HERE: Bush gen V 1.0
-        Rectangle bounds = null;
-        switch (type) {
-            case TYPE_OAK:
-                bounds = spawnLeaf(72, 96, 72, 24, 32, 0, 0,
-                        new Color(29, 87, 18));
-                break;
-            case TYPE_SAVANNA:
-                int leafGroups = random.nextInt(5)+3;
-                int smallestX=Integer.MAX_VALUE, smallestY=Integer.MAX_VALUE,
-                        largestX=Integer.MIN_VALUE, largestY=Integer.MIN_VALUE;
-                for(int i = 0; i < leafGroups; i++) {
-                    int angle = random.nextInt(359);
-                    int distance = random.nextInt(20)+30;
-                    int xx = (int)(Math.cos(Math.toRadians(angle))*distance);
-                    int yy = (int)(Math.sin(Math.toRadians(angle))*distance);
+        Rectangle bounds = spawnLeaf(24, 36, 24,
+                0, 0);
+        int numBerries = 5+random.nextInt(5);
+        for(int i = 0; i < numBerries; i++) {
+            double distance = random.nextDouble()*30;
+            double angle = random.nextDouble()*360;
+            int xx = (int)(x+Math.cos(Math.toRadians(angle))*distance);
+            int yy = (int)(y+Math.sin(Math.toRadians(angle))*distance);
 
-                    Point[] brunch = new Point[] {
-                            new Point(x, y),
-                            new Point(x+xx, y+yy)
-                    };
-                    brunches.add(brunch);
-
-                    Color baseColor = new Color(59+random.nextInt(10),
-                            111+random.nextInt(10),
-                            44+random.nextInt(10));
-
-                    Rectangle tempBounds = spawnLeaf(36, 48, 30,
-                            10, 16, xx, yy, baseColor);
-
-                    smallestX = Math.min(smallestX, tempBounds.x);
-                    smallestY = Math.min(smallestY, tempBounds.y);
-                    largestX = Math.max(largestX, tempBounds.x+tempBounds.width);
-                    largestY = Math.max(largestY, tempBounds.y+tempBounds.height);
-                }
-
-                bounds = new Rectangle(smallestX, smallestY, largestX-smallestX,
-                        largestY-smallestY);
-
-                break;
+            Leaf berry = new Leaf(xx, yy, 5, random.nextInt(10)-5,
+                    random.nextInt(359));
+            berry.baseColor = new Color(100, 40, 40);
+            leaf.add(berry);
         }
 
-        if(bounds != null) {
-            mask = new Mask.Rectangle((double) bounds.x, (double) bounds.y,
-                    bounds.width, bounds.height);
-            aabbComponent = new AABBComponent(new Mask.Rectangle(x-8, y-8, 16, 16));
-        }
+
+        mask = new Mask.Rectangle((double)bounds.x, (double)bounds.y, bounds.width, bounds.height);
+        this.aabbComponent = new AABBComponent(mask);
     }
 
     @Override
@@ -104,8 +72,8 @@ public class Tree extends GameObject {
         boolean spawn = random.nextInt(16) == 3;
 
         leaf.forEach(leave -> {
-            if(collision_EffectivelyFinal) {/* && !this.prevCollision) {*/
-                leave.speed = 24d;
+            if(collision_EffectivelyFinal && !prevCollision) {/* && !this.prevCollision) {*/
+                leave.speed = 12d;
                 if(fliesInside) {
                     if (spawn) {
                         for (int i = 0; i < random.nextInt(5) + 3; i++) {
@@ -118,7 +86,7 @@ public class Tree extends GameObject {
                 }
             }
             leave.step+=Main.toSlowMotion(leave.speed);
-            leave.speed=Math.max(1, leave.speed-0.25);
+            leave.speed=Math.max(1, leave.speed-0.125);
             leave.addX = (int)(Math.cos(Math.toRadians(leave.step))*2d);
             leave.addY = (int)(Math.sin(Math.toRadians(leave.step))*2d);
         });
@@ -128,10 +96,6 @@ public class Tree extends GameObject {
 
     @Override
     public void render(Renderer r) {
-        ((Graphics2D)r.getG()).setStroke(new BasicStroke(8, BasicStroke.CAP_ROUND,
-                BasicStroke.JOIN_ROUND));
-        brunches.forEach(b -> r.drawLine(b[0].x, b[0].y, b[1].x, b[1].y,
-                new Color(80, 40, 10)));
         leaf.forEach(leave -> r.fillRectangle(leave.x-leave.size/2+leave.addX, leave.y-leave.size/2+leave.addY,
                 leave.size, leave.size, leave.getColor()));
     }
@@ -146,22 +110,17 @@ public class Tree extends GameObject {
 
     }
 
-    private Rectangle spawnLeaf(int minLeaf, int maxLeaf, int distanceLimit,
-                                int minSize, int maxSize, int offX, int offY, Color baseColor) {
+    private Rectangle spawnLeaf(int minLeaf, int maxLeaf, int distanceLimit, int offX, int offY) {
         int numLeaf = random.nextInt(maxLeaf-minLeaf) + minLeaf;
         int smallestX=Integer.MAX_VALUE, smallestY=Integer.MAX_VALUE, largestX=Integer.MIN_VALUE, largestY=Integer.MIN_VALUE;
         for (int i = 0; i < numLeaf; i++) {
             // HERE: Create a leave
             double distance = random.nextDouble()*distanceLimit;
             double angle = random.nextDouble()*360;
-            int xx = (int)(offX+x+Math.cos(Math.toRadians(angle))*distance);
-            int yy = (int)(offY+y+Math.sin(Math.toRadians(angle))*distance);
-//            int xx = (int)x - random.nextInt(distanceLimit*2) + distanceLimit + offX;
-//            int yy = (int)y - random.nextInt(distanceLimit*2) + distanceLimit + offY;
-            int size = minSize+random.nextInt(maxSize-minSize);
-            Leaf leave = new Leaf(xx, yy, size, random.nextInt(15), random.nextInt(359));
-            leave.baseColor = baseColor;
-            leaf.add(leave);
+            int xx = (int)(x+Math.cos(Math.toRadians(angle))*distance);
+            int yy = (int)(y+Math.sin(Math.toRadians(angle))*distance);
+            int size = (int)((random.nextInt(30)+24f)*(i/numLeaf+0.5f));
+            leaf.add(new Leaf(xx, yy, size, random.nextInt(15), random.nextInt(359)));
 
             smallestX = Math.min(smallestX, xx-size/2);
             smallestY = Math.min(smallestY, yy-size/2);

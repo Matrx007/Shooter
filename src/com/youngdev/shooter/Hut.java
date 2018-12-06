@@ -102,10 +102,12 @@ public class Hut extends GameObject {
             for(int piece = 0; piece < numPieces; piece++) {
                 int[] pieceCords = new int[6];
 
-                double _locX1 = roofX+roofW/numPieces*piece;
-                double _locY1 = roofY-random.nextInt(6);
-                double _locX2 = roofX+roofW/numPieces*(piece+1);
-                double _locY2 = roofY-random.nextInt(6);
+                int add = random.nextInt(6);
+
+                double _locX1 = roofX+roofW/numPieces*piece-add;
+                double _locY1 = roofY-add;
+                double _locX2 = roofX+roofW/numPieces*(piece+1)+add;
+                double _locY2 = roofY-add;
 
                 double[] p1 = rotatePoint( _locX1, _locY1, roofMiddleX, roofMiddleY, side*90);
                 int locX1 = (int)(p1[0]);

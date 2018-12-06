@@ -6,23 +6,24 @@ import com.engine.libs.font.Alignment;
 import com.engine.libs.game.GameObject;
 import com.engine.libs.game.Mask;
 import com.engine.libs.game.behaviors.AABBCollisionManager;
-import com.engine.libs.game.behaviors.AABBComponent;
 import com.engine.libs.input.Input;
 import com.engine.libs.math.AdvancedMath;
 import com.engine.libs.rendering.Filter;
 import com.engine.libs.rendering.RenderUtils;
 import com.engine.libs.rendering.Renderer;
 import com.engine.libs.world.CollisionMap;
-import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import javax.swing.filechooser.FileFilter;
 import java.awt.*;
-import java.awt.event.KeyEvent;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.BinaryOperator;
 
 import static com.youngdev.shooter.EnemyBolt.calcColorParameter;
 import static java.awt.event.KeyEvent.*;
@@ -80,7 +81,7 @@ public class Main extends Game {
 
         e.width = width;
         e.height = height;
-        e.scale = 3f;
+        e.scale = 4f;
 
         showDebugInfo = false;
 
@@ -220,7 +221,7 @@ public class Main extends Game {
                 intersects(new Rectangle((int)hut.x, (int)hut.y, hut.w, hut.h))) return;
 
         for(int i = 0; i < random.nextInt(4); i++) {
-            chunk.add(new Tree(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY));
+            chunk.add(new Bush(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY));
         }
 
         for(int i = 0; i < random.nextInt(3); i++) {
@@ -273,6 +274,11 @@ public class Main extends Game {
             }
         }
 
+        if(random.nextInt(6)==1) {
+            chunk.add(new Tree(minX + random.nextInt(chunkSize),
+                    minY + random.nextInt(chunkSize)));
+        }
+
         getChunkArray(x, y).addAll(chunk);
 
         if(isOnScreen(x, y, 2))
@@ -283,6 +289,14 @@ public class Main extends Game {
         Point loc = new Point(x, y);
         if(!chunks.containsKey(loc)) {
             chunks.put(loc, new CopyOnWriteArrayList<>());
+        }
+        return chunks.get(loc);
+    }
+
+    public CopyOnWriteArrayList<GameObject> getAndGenerateChunk(int x, int y) {
+        Point loc = new Point(x, y);
+        if(!chunks.containsKey(loc)) {
+            generateChunk(loc.x, loc.y);
         }
         return chunks.get(loc);
     }
@@ -574,7 +588,7 @@ public class Main extends Game {
         Iterator<GameObject> it3;
         for(it3 = Main.main.visibleChunkObjects.iterator(); it3.hasNext();) {
             GameObject obj = it3.next();
-            if(obj instanceof Tree || obj instanceof Plant || obj instanceof Trash) {
+            if(obj instanceof Bush || obj instanceof Plant || obj instanceof Trash) {
                 obj.update(core.getInput());
             }
         };
@@ -608,6 +622,95 @@ public class Main extends Game {
             camera.target = player;
         }
 
+        if(i.isKeyDown(VK_F6)) {
+            int centerX = e.getRenderer().getCamX()+width/2;
+            int centerY = e.getRenderer().getCamY()+height/2;
+
+            int chunkX1 = (centerX-8192)/chunkSize;
+            int chunkY1 = (centerY-8192)/chunkSize;
+            int chunkX2 = (centerX+8192)/chunkSize;
+            int chunkY2 = (centerY+8192)/chunkSize;
+
+            for(int j = chunkY1; j < chunkY2; j++) {
+                for(int k = chunkX1; k < chunkX2; k++) {
+                    getAndGenerateChunk(k, j);
+                }
+            }
+        }
+
+        if(i.isKeyDown(VK_F5)) {
+            // HERE: Take a "Mega" screenshot
+            BufferedImage image = new BufferedImage(16384, 16384, BufferedImage.TYPE_INT_RGB);
+            Renderer r = new Renderer(image.getGraphics(), image.getWidth(), image.getHeight());
+            r.absolute();
+            r.fillRectangle(0, 0, image.getWidth(), image.getHeight(), grassColor);
+
+            int centerX = e.getRenderer().getCamX()+width/2;
+            int centerY = e.getRenderer().getCamY()+height/2;
+
+            int chunkX1 = (centerX-8192)/chunkSize;
+            int chunkY1 = (centerY-8192)/chunkSize;
+            int chunkX2 = (centerX+8192)/chunkSize;
+            int chunkY2 = (centerY+8192)/chunkSize;
+
+            r.relative();
+            r.setCamX( chunkX1*chunkSize);
+            r.setCamY( chunkY1*chunkSize);
+            r.relative();
+
+            ArrayList<GameObject> objects = new ArrayList<>();
+
+            for(int j = chunkY1; j < chunkY2; j++) {
+                for(int k = chunkX1; k < chunkX2; k++) {
+                    objects.addAll(getAndGenerateChunk(k, j));
+//                    .forEach(o -> o.render(r));
+                }
+            }
+
+            Mask.Rectangle area = new Mask.Rectangle(chunkX1*chunkSize, chunkY1*chunkSize,
+                    (chunkX2-chunkX1)*chunkSize, (chunkY2-chunkY1)*chunkSize);
+
+            for(GameObject entity : entities) {
+                if(entity.mask.isColliding(area)) {
+                    objects.add(entity);
+//                    entity.render(r);
+                }
+            }
+
+
+            objects.sort(Comparator.comparingInt((o) -> o.depth));
+            objects.forEach(o -> o.render(r));
+
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setMultiSelectionEnabled(false);
+            fileChooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+            fileChooser.setFileFilter(new FileFilter() {
+                @Override
+                public boolean accept(File f) {
+                    return f.isDirectory() || f.getName().endsWith(".png");
+                }
+
+                @Override
+                public String getDescription() {
+                    return "PNG";
+                }
+            });
+            fileChooser.showSaveDialog(e.getWindow().getFrame());
+            File file = fileChooser.getSelectedFile();
+            if(file != null) {
+                try {
+                    if(!file.getName().contains(".")) {
+                        file = new File(file.getAbsolutePath()+".png");
+                    }
+                    ImageIO.write(image, "PNG", file);
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
+            }
+
+            JOptionPane.showMessageDialog(e.getWindow().getFrame(), "Image saved");
+        }
+
         if(i.isKeyDown(VK_F3)) {
             for(GameObject obj : entities) {
                 if(obj.mask.isColliding(i.getRelativeMouseX(), i.getRelativeMouseY())) {
@@ -639,7 +742,7 @@ public class Main extends Game {
 
         if(i.isButton(1) && showDebugInfo) {
 //            // Place new tree, debug only!
-//            world.add(new Tree(i.getMouseX(), i.getMouseY()));
+//            world.add(new Bush(i.getMouseX(), i.getMouseY()));
 
             // HERE: Generate selected chunk
             deleteChunk(hoverChunkX, hoverChunkY);
