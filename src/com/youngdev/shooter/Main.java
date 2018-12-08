@@ -56,7 +56,6 @@ public class Main extends Game {
     private int[] buttonStates;
     private BufferedImage[] buttonImages;
     private ArrayList<UniParticle> startMenuButtonParticles;
-    public Hut hut;
 
     public Cursor cursor;
 
@@ -81,7 +80,7 @@ public class Main extends Game {
 
         e.width = width;
         e.height = height;
-        e.scale = 4f;
+        e.scale = 3f;
 
         showDebugInfo = false;
 
@@ -132,7 +131,6 @@ public class Main extends Game {
         e.getRenderer().setCamY(Integer.MAX_VALUE/2-e.height/2);
         player = new Player(e.getRenderer().getCamX()+e.width/2,
                 e.getRenderer().getCamY()+e.height/2);
-        hut = new Hut((int)player.x, (int)player.y);
 
         camera = new Camera(e.width, e.height, player);
 
@@ -216,9 +214,6 @@ public class Main extends Game {
 
         int minX = x*chunkSize;
         int minY = y*chunkSize;
-
-        if(new Rectangle(minX, minY, chunkSize, chunkSize).
-                intersects(new Rectangle((int)hut.x, (int)hut.y, hut.w, hut.h))) return;
 
         for(int i = 0; i < random.nextInt(4); i++) {
             chunk.add(new Bush(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY));
@@ -352,7 +347,6 @@ public class Main extends Game {
         ArrayList<GameObject> addQueue = new ArrayList<>();
         if(!startMenuMode) {
             addQueue.add(player);
-            addQueue.add(hut);
         }
 
         // HERE: Add chunks that are inside screen to visibleChunkObjects list
@@ -600,16 +594,10 @@ public class Main extends Game {
 
         camera.update();
         camera.apply(core.getRenderer());
-
-        chunkXTopLeft = (int)Math.floor(e.getRenderer().getCamX()/(double)chunkSize);
-        chunkYTopLeft = (int)Math.floor(e.getRenderer().getCamY()/(double)chunkSize);
-        chunkXBottomRight = (int)Math.floor((e.width+e.getRenderer().getCamX())/(double)chunkSize);
-        chunkYBottomRight = (int)Math.floor((e.height+e.getRenderer().getCamY())/(double)chunkSize);
-
-        /*chunkXTopLeft = (int)Math.floor(camera.cX/(double)chunkSize);
+        chunkXTopLeft = (int)Math.floor(camera.cX/(double)chunkSize);
         chunkYTopLeft = (int)Math.floor(camera.cY/(double)chunkSize);
         chunkXBottomRight = (int)Math.floor((e.width+camera.cX)/(double)chunkSize);
-        chunkYBottomRight = (int)Math.floor((e.height+camera.cY)/(double)chunkSize);*/
+        chunkYBottomRight = (int)Math.floor((e.height+camera.cY)/(double)chunkSize);
 
         // HERE: Gather together all chunks that are visible
         // HERE: and put them to visibleChunkObjects
@@ -826,7 +814,7 @@ public class Main extends Game {
             cb = cb * (1 - (amount * 0.25)) + grayScaleColor * (amount * 0.25);
 
             cg = Math.max(0, Math.min(255, cg));
-            cr = Math.max(0, Math.min(255, cr * 1.25));
+            cr = Math.max(0, Math.min(255, cr * 1.25d));
             cb = Math.max(0, Math.min(255, cb));
 
             return new Color((int) cr, (int) cg, (int) cb, newC.getAlpha());
@@ -1015,6 +1003,8 @@ public class Main extends Game {
             r.drawText("Generated chunks: " + chunks.size(), 8, y, 10, Color.black);
             y += addY;
             r.drawText("Flies: " + flies.size(), 8, y, 10, Color.black);
+            y += addY;
+            r.drawText("Visible objects: " + visibleChunkObjects.size(), 8, y, 10, Color.black);
         }
         r.relative();
         r.clearFilters();

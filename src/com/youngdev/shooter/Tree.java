@@ -23,6 +23,7 @@ public class Tree extends GameObject {
 
     public Tree(int x, int y) {
         super(11, 20);
+        this.depth = 20;
         this.x = x;
         this.y = y;
         this.fliesInside = true;
@@ -58,9 +59,10 @@ public class Tree extends GameObject {
                     };
                     brunches.add(brunch);
 
-                    Color baseColor = new Color(59+random.nextInt(10),
-                            111+random.nextInt(10),
-                            44+random.nextInt(10));
+                    int colorTone = random.nextInt(20)-10;
+                    Color baseColor = new Color(59+colorTone,
+                            111+colorTone,
+                            44+colorTone);
 
                     Rectangle tempBounds = spawnLeaf(36, 48, 30,
                             10, 16, xx, yy, baseColor);

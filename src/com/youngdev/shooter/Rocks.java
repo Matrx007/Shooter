@@ -25,13 +25,13 @@ public class Rocks extends GameObject {
         this.depth = random.nextInt(1023)+depth*1024;
 
         rocks = new ArrayList<>();
-        int numRocks = random.nextInt(4)+5;
+        int numRocks = random.nextInt(7)+10;
         int smallestX=Integer.MAX_VALUE, smallestY=Integer.MAX_VALUE, largestX=Integer.MIN_VALUE, largestY=Integer.MIN_VALUE;
         for(int i = 0; i < numRocks; i++) {
             // HERE: Create a leave
             int xx = x-random.nextInt(24)+12;
             int yy = y-random.nextInt(24)+12;
-            int size = random.nextInt(6)+12;
+            int size = random.nextInt(20)+4;
             rocks.add(new Rock(xx, yy, size, random.nextInt(8)*5));
 
             smallestX = Math.min(smallestX, (int)Math.floor(xx-size/2d));

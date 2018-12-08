@@ -39,21 +39,15 @@ public class Player extends Healable {
     private static int statsReloadTargetHeight = -56-12-16;
     private static int reloadTargetHeight = -16;
     private float speedX, targetSpeedX, speedY, targetSpeedY, maxSpeed, speedStep, blinkingTimer;
-    private int depthDefault, depthInHut;
-
 
     public Player(int x, int y) {
         super(x, y, 4, 4, 200, 0, 10, false, false);
-
+        this.depth = 10;
         this.random = new Random();
         particles = new ArrayList<>();
 
-        depthDefault = 10;
-        depthInHut = 22;
-
         // HERE: Fix depth
-        depthDefault = random.nextInt(1023)+depthDefault*1024;
-        depthInHut = random.nextInt(1023)+depthInHut*1024;
+        depth = random.nextInt(1023)+depth*1024;
 
         leftHandReload = 0;
         rightHandReload = 0;
@@ -93,7 +87,6 @@ public class Player extends Healable {
         midX = Main.main.getE().getWidth()/2;
         midY = Main.main.getE().getHeight()/2;
 
-        random = new Random();
         core = Main.main.getE();
 
         this.buildingMode = true;
@@ -137,19 +130,6 @@ public class Player extends Healable {
 
     @Override
     public void update(Input i) {
-        depth = depthDefault;
-        Iterator<GameObject> it;
-        for(it = Main.main.visibleChunkObjects.iterator(); it.hasNext();) {
-            GameObject obj = it.next();
-
-            if(obj instanceof Hut) {
-                if(AdvancedMath.inRange(x, y, obj.x, obj.y, ((Hut) obj).w, ((Hut) obj).h)) {
-                    depth = depthInHut;
-                    break;
-                }
-            }
-        }
-
 //        boolean prevInvOpen = inventoryOpen;
         blinkingTimer += 1d/Main.toSlowMotion(1d);
 

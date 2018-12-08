@@ -57,9 +57,10 @@ public class Trash extends GameObject {
                     int width = random.nextInt(2)+2;
 
                     UniParticle.Process stepOverProcess = new UniParticle.Process() {
-                        private double speedX, speedY, xx, yy, angle;
+                        private double speedX, speedY, xx, yy, angle, targetAngle;
                         private double xx1, yy1, xx2, yy2;
                         private Color color;
+                        private boolean prevCollision;
 
                         @Override
                         public void init() {
@@ -77,6 +78,8 @@ public class Trash extends GameObject {
                             this.xx2 = x2;
                             this.yy2 = y2;
                             this.angle = random.nextInt(359);
+                            targetAngle = angle;
+                            prevCollision = false;
                         }
 
                         @Override
@@ -91,13 +94,14 @@ public class Trash extends GameObject {
                             speedX *= 0.5;
                             speedY *= 0.5;
 
+                            boolean found = false;
                             Player player = Main.main.player;
                             if(Fly.distance(owner.x, owner.y, player.x, player.y) < 16d) {
                                 speedX = Math.cos(Math.toRadians(
                                         Fly.angle(player.x, player.y, owner.x, owner.y)-180));
                                 speedY = Math.sin(Math.toRadians(
                                         Fly.angle(player.x, player.y, owner.x, owner.y)-180));
-                                angle += random.nextDouble()-0.5d;
+                                found = true;
                             } else {
                                 for (GameObject entity : Main.main.entities) {
                                     if(entity instanceof Healable) {
@@ -106,12 +110,20 @@ public class Trash extends GameObject {
                                                     Fly.angle(entity.x, entity.y, owner.x, owner.y) - 180));
                                             speedY = Math.sin(Math.toRadians(
                                                     Fly.angle(entity.x, entity.y, owner.x, owner.y) - 180));
-                                            angle += random.nextDouble() - 0.5d;
+                                            found = true;
                                             break;
                                         }
                                     }
                                 }
                             }
+
+                            if(found && !prevCollision) {
+                                targetAngle += random.nextInt(90)-45;
+                            }
+
+                            prevCollision = found;
+
+                            angle += (targetAngle - angle) *0.1d;
 
                             xx += Main.toSlowMotion(speedX);
                             yy += Main.toSlowMotion(speedY);
@@ -120,10 +132,10 @@ public class Trash extends GameObject {
                             owner.y = (int)yy;
 
                             if(angle != prevAngle) {
-                                xx1 = (Math.cos(angle)*length);
-                                yy1 = (Math.sin(angle)*length);
-                                xx2 = (Math.cos(angle-180)*length);
-                                yy2 = (Math.sin(angle-180)*length);
+                                xx1 = (Math.cos(Math.toRadians(angle))*length);
+                                yy1 = (Math.sin(Math.toRadians(angle))*length);
+                                xx2 = (Math.cos(Math.toRadians(angle-180))*length);
+                                yy2 = (Math.sin(Math.toRadians(angle-180))*length);
                             }
                         }
                     };
