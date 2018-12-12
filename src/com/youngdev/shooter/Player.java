@@ -20,7 +20,8 @@ public class Player extends Healable {
     private Random random;
     private AABBCollisionManager cm;
     boolean blinkingON;
-    private boolean found, waitingForRelease;
+    private boolean found;
+    private boolean waitingForRelease;
     public boolean buildingMode, inventoryOpen, leftHandShooting, rightHandShooting, clipOverlayOpen;
     public int xx, yy, invSize = 24, midX, midY, selectedItem, time=60, timer, leftHandReload, rightHandReload,
             reloadTime = 50, bulletTimingCap = 5, leftHandBulletTimingCapCounter, leftHandBulletAmountCounter,
@@ -30,7 +31,7 @@ public class Player extends Healable {
             clipOverlayRotation, clipOverlayRotationSpeed, clipOverlayRotationTarget, health, healthMax,
             hunger, hungerMax, statsOverlayAlpha, statsOverlayRotation, statsOverlayRotationSpeed,
             statsOverlayRotationTarget, autoReloadBlinkingTime, autoReloadBlinkingTimer, autoReloadTime,
-            autoReloadTimer, autoReloadMaximumAmmo, autoReloadY, autoReloadTargetY;
+            autoReloadTimer, autoReloadMaximumAmmo, autoReloadY, autoReloadTargetY, slowMotionSpeedMultiplierTarget;
     private int blinkingTime = 30;
     public int[] items;
     private String[] itemNames;
@@ -65,24 +66,6 @@ public class Player extends Healable {
         hunger = 100d;
         healthMax = 150d;
         hungerMax = 150d;
-
-        items = new int[5];
-        itemNames = new String[] {
-                "Empty Hand",
-                "Rock Wall",
-                "Wooden Wall",
-                "Plant Fiber Wall",
-                "Wood Flooring"
-        };
-        itemSamples = new StructuralBlock[] {
-                null,
-                new StructuralBlock(0, 0, StructuralBlock.TYPE_ROCKS),
-                new StructuralBlock(0, 0, StructuralBlock.TYPE_WOOD),
-                new StructuralBlock(0, 0, StructuralBlock.TYPE_FIBER),
-                new StructuralBlock(0, 0, StructuralBlock.TYPE_WOOD_FLOORING)
-        };
-
-        inventoryOpen = false;
 
         midX = Main.main.getE().getWidth()/2;
         midY = Main.main.getE().getHeight()/2;
@@ -125,12 +108,14 @@ public class Player extends Healable {
         autoReloadY = reloadTargetHeight;
         autoReloadTargetY = reloadTargetHeight;
 
+        slowMotionSpeedMultiplierTarget = 1d;
+
         cm = new AABBCollisionManager(this, Main.collisionMap);
     }
 
     @Override
     public void update(Input i) {
-//        boolean prevInvOpen = inventoryOpen;
+        boolean prevInvOpen = inventoryOpen;
         blinkingTimer += 1d/Main.toSlowMotion(1d);
 
         if(blinkingTimer >= blinkingTime) {
@@ -142,10 +127,9 @@ public class Player extends Healable {
         int moveX = (i.isKey(KeyEvent.VK_D) ? 1 : 0) - (i.isKey(KeyEvent.VK_A) ? 1 : 0);
         int moveY = (i.isKey(KeyEvent.VK_S) ? 1 : 0) - (i.isKey(KeyEvent.VK_W) ? 1 : 0);
 
-        /*if(moveX != 0 || moveY != 0) {
-            inventoryOpen = false;
+        if((moveX != 0 || moveY != 0)) {
             timer = time;
-        }*/
+        }
 
         targetSpeedX = moveX * maxSpeed;
         targetSpeedY = moveY * maxSpeed;
@@ -308,42 +292,6 @@ public class Player extends Healable {
             autoReloadBlinkingTimer = 0;
             autoReloadTimer = 0;
         }
-
-/*
-        if(inventoryOpen) {
-            timer--;
-            if (timer < 0) {
-                inventoryOpen = false;
-                timer = 0;
-            }
-        }
-
-        if(i.scroll > 0) {
-            selectedItem++;
-            if(selectedItem > items.length-1) {
-                selectedItem = 0;
-            }
-
-            i.scroll = 0;
-            inventoryOpen = true;
-            timer = time;
-        } else if(i.scroll < 0) {
-            selectedItem--;
-            if(selectedItem < 0) {
-                selectedItem = items.length-1;
-            }
-
-            i.scroll = 0;
-            inventoryOpen = true;
-            timer = time;
-        }
-
-        if(prevInvOpen && !inventoryOpen) {
-            buildingMode = (itemSamples[selectedItem] == null);
-        }*/
-
-//        Main.main.getE().getRenderer().setCamX(xx - core.width/2);
-//        Main.main.getE().getRenderer().setCamY(yy - core.height/2);
     }
 
     @Override
@@ -357,20 +305,8 @@ public class Player extends Healable {
     }
 
     public void renderInventory(Renderer r) {
-        int startX = midX - items.length*invSize/2;
-        int startY = midY - invSize/2;
-        int i = 0;
-        for(StructuralBlock block : itemSamples) {
-            if(block != null)
-                block.render(r, startX + i*invSize+4, startY+4);
-            i++;
-        }
-        r.fillRectangle(startX+selectedItem*invSize, startY, invSize, invSize, new Color(64, 64, 64, 128));
-        Font old = r.getG().getFont();
-        r.setFont(new Font("Verdana", Font.BOLD, 12));
-        r.drawText(itemNames[selectedItem], midX, midY-invSize-4, 12, new Alignment(
-                Alignment.HOR_CENTER, Alignment.VER_MIDDLE), new Color(64, 64, 64));
-        r.setFont(old);
+        r.absolute();
+        r.relative();
     }
 
     @Override

@@ -24,9 +24,6 @@ public class Trash extends GameObject {
         this.y = y;
         random = new Random();
 
-        // HERE: Fix depth
-        this.depth = random.nextInt(1023)+depth*1024;
-
         this.type = random.nextInt(3)+1;
 //        this.type = TYPE_BRANCHES;
 
@@ -34,6 +31,7 @@ public class Trash extends GameObject {
 
         switch (type) {
             case TYPE_BRANCHES:
+                depth = 5;
                 final Color baseColor0 = new Color(75, 11, 13);
                 Color c;
 
@@ -153,6 +151,7 @@ public class Trash extends GameObject {
                 this.mask = new Mask.Rectangle(x-30, y-30, 60, 60);
                 break;
             case TYPE_WATER:
+                depth = 4;
                 Color baseColor1 = new Color(150, 150, 230);
                 baseColor1 = new Color(
                         UniParticle.calcColorParameter(Main.grassColor.getRed(), baseColor1.getRed(), 0.25f),
@@ -201,6 +200,7 @@ public class Trash extends GameObject {
                 this.mask = new Mask.Rectangle(x-30, y-30, 60, 60);
                 break;
             case TYPE_MUD:
+                depth = 4;
                 Color baseColor2 = new Color(99, 27, 23);
                 baseColor2 = new Color(
                         UniParticle.calcColorParameter(Main.grassColor.getRed(), baseColor2.getRed(), 0.25f),
@@ -249,6 +249,9 @@ public class Trash extends GameObject {
                 this.mask = new Mask.Rectangle(x-30, y-30, 60, 60);
                 break;
         }
+
+        // HERE: Fix depth
+        this.depth = random.nextInt(1023)+depth*1024;
     }
 
     @Override

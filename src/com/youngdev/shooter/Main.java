@@ -17,6 +17,7 @@ import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
 import java.awt.*;
+import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -44,7 +45,7 @@ public class Main extends Game {
     private boolean usesChunkRenderer;
     public boolean showDebugInfo;
     public static float slowMotionSpeed = 1f;
-    public static  float mcpSlowMotionMultiplier = 1f;
+    public static  float slowMotionMultiplier = 1f;
     private Random random;
     public Camera camera;
     public static CollisionMap collisionMap;
@@ -91,26 +92,28 @@ public class Main extends Game {
 
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
 
-        try {
-            ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getClassLoader().getResourceAsStream("/press-start.regular.ttf")));
-            ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getClassLoader().getResourceAsStream("/Nunito-Bold.ttf")));
-        } catch (Exception ignored1) {
+        ArrayList<String> fonts = new ArrayList<>();
+        fonts.add("press-start.regular.ttf");
+        fonts.add("Nunito-Bold.ttf");
+        fonts.add("Nunito-Light.ttf");
+
+        for(String name : fonts) {
             try {
-                ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getResourceAsStream("/press-start.regular.ttf")));
-                ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getResourceAsStream("/Nunito-Bold.ttf")));
-            } catch (Exception ignored2) {
+                ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getClassLoader().getResourceAsStream("/"+name)));
+            } catch (Exception ignored1) {
                 try {
-                    ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getClassLoader().getResourceAsStream("press-start.regular.ttf")));
-                    ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getClassLoader().getResourceAsStream("Nunito-Bold.ttf")));
-                } catch (Exception ignored3) {
+                    ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getResourceAsStream("/"+name)));
+                } catch (Exception ignored2) {
                     try {
-                        ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getResourceAsStream("press-start.regular.ttf")));
-                        ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getResourceAsStream("Nunito-Bold.ttf")));
-                    } catch (Exception ignored4) {}
+                        ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getClassLoader().getResourceAsStream(name)));
+                    } catch (Exception ignored3) {
+                        try {
+                            ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getResourceAsStream(name)));
+                        } catch (Exception ignored4) {}
+                    }
                 }
             }
         }
-
 
         random = new Random();
         entities = Collections.synchronizedList(new ArrayList<>());
@@ -252,7 +255,7 @@ public class Main extends Game {
         }
 
         if(random.nextInt(6)==2) {
-            entities.add(new Bunny(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY));
+            entities.add(new Rabbit(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY));
         }
 
         if(random.nextInt(7)==3) {
@@ -715,7 +718,7 @@ public class Main extends Game {
 //            Arrow arrow = new Arrow(i.getRelativeMouseX(), i.getRelativeMouseY(),
 //                    (int)Fly.angle(i.getRelativeMouseX(), i.getRelativeMouseY(), player.x, player.y)-180);
 //            arrow.shotByFriendly = false;
-            GameObject bunny = new Bunny(i.getRelativeMouseX(), i.getRelativeMouseY());
+            GameObject bunny = new Rabbit(i.getRelativeMouseX(), i.getRelativeMouseY());
             entities.add(bunny);
 //            camera.target = bunny;
         }
@@ -773,11 +776,11 @@ public class Main extends Game {
     }
 
     public static int toSlowMotion(int amount) {
-        return (int)(amount*slowMotionSpeed*mcpSlowMotionMultiplier);
+        return (int)(amount*slowMotionSpeed* slowMotionMultiplier);
     }
 
     public static double toSlowMotion(double amount) {
-        return amount*slowMotionSpeed*mcpSlowMotionMultiplier;
+        return amount*slowMotionSpeed* slowMotionMultiplier;
     }
 
     @Override
@@ -1016,7 +1019,7 @@ public class Main extends Game {
             // HERE: Render buttons
             int y = 64;
             int x = 16;
-            for(int i = 0; i < numButtons; i++) {
+            for (int i = 0; i < numButtons; i++) {
                 r.drawImage(x, y, buttonImages[i]);
                 y += 32;
             }

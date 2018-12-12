@@ -9,7 +9,7 @@ import com.engine.libs.rendering.Renderer;
 import java.awt.*;
 import java.util.Random;
 
-public class Bunny extends Healable {
+public class Rabbit extends Healable {
 
     double speedTick;
     double direction;
@@ -26,7 +26,7 @@ public class Bunny extends Healable {
 
     public static final boolean collideWithOthers = false;
 
-    public Bunny(int x, int y) {
+    public Rabbit(int x, int y) {
         super(x, y, 16, 16, 50, 13, 9, false, collideWithOthers);
         random = new Random();
 
@@ -60,13 +60,13 @@ public class Bunny extends Healable {
                 speedTarget = maxSpeed*0.5d + maxSpeed*random.nextDouble()*0.5d;
                 movingTime = random.nextInt(60)+15;
             } else {
-                movingTime--;
+                movingTime-=Main.toSlowMotion(1d);
             }
 //            System.out.println("movingTime = " + movingTime);
         }
 
-        direction += (directionTarget - direction) * 0.25d;
-        speed += (speedTarget - speed) * 0.1d;
+        direction += Main.toSlowMotion((directionTarget - direction) * 0.25d);
+        speed += Main.toSlowMotion((speedTarget - speed) * 0.1d);
 
         if(collideWithOthers) {
             unStucking = Main.collisionMap.collisionWithExcept(this.mask, aabbComponent);
@@ -81,10 +81,12 @@ public class Bunny extends Healable {
 //            System.out.println("direction = " + direction);
 //            System.out.println("directionTarget = " + directionTarget);
 //            aabbComponent.area = this.mask;
-                cm.move(Math.cos(Math.toRadians(direction)) * speed, Math.sin(Math.toRadians(direction)) * speed);
+                cm.move(Math.cos(Math.toRadians(direction)) * Main.toSlowMotion(this.speed),
+                        Math.sin(Math.toRadians(direction)) * Main.toSlowMotion(this.speed));
             }
         } else {
-            cm.move(Math.cos(Math.toRadians(direction)) * speed, Math.sin(Math.toRadians(direction)) * speed);
+            cm.move(Math.cos(Math.toRadians(direction)) * Main.toSlowMotion(this.speed),
+                    Math.sin(Math.toRadians(direction)) * Main.toSlowMotion(this.speed));
         }
     }
 
