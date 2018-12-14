@@ -350,6 +350,7 @@ public class Main extends Game {
         ArrayList<GameObject> addQueue = new ArrayList<>();
         if(!startMenuMode) {
             addQueue.add(player);
+            addQueue.add(player.shadowRenderer);
         }
 
         // HERE: Add chunks that are inside screen to visibleChunkObjects list
@@ -762,6 +763,10 @@ public class Main extends Game {
 
         findOnScreenBlocked = false;
         if(findOnScreenCalled) findOnScreenObjects();
+
+        if(!startMenuMode) {
+            player.castRays();
+        }
 
         if(startMenuModePrev != startMenuMode) {
             if(startMenuMode) {

@@ -27,7 +27,7 @@ public class Rabbit extends Healable {
     public static final boolean collideWithOthers = false;
 
     public Rabbit(int x, int y) {
-        super(x, y, 16, 16, 50, 13, 9, false, collideWithOthers);
+        super(x, y, 16, 16, 50, 13, 5, false, collideWithOthers);
         random = new Random();
 
         cm = new AABBCollisionManager(this, Main.collisionMap);

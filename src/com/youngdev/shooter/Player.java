@@ -1,7 +1,8 @@
 package com.youngdev.shooter;
 
-import com.engine.libs.font.Alignment;
+import com.engine.Game;
 import com.engine.libs.game.GameObject;
+import com.engine.libs.game.Mask;
 import com.engine.libs.game.behaviors.AABBCollisionManager;
 import com.engine.libs.input.Input;
 import com.engine.libs.math.AdvancedMath;
@@ -10,9 +11,7 @@ import com.engine.libs.rendering.Renderer;
 import java.awt.*;
 
 import java.awt.event.KeyEvent;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Random;
+import java.util.*;
 
 public class Player extends Healable {
 
@@ -31,7 +30,8 @@ public class Player extends Healable {
             clipOverlayRotation, clipOverlayRotationSpeed, clipOverlayRotationTarget, health, healthMax,
             hunger, hungerMax, statsOverlayAlpha, statsOverlayRotation, statsOverlayRotationSpeed,
             statsOverlayRotationTarget, autoReloadBlinkingTime, autoReloadBlinkingTimer, autoReloadTime,
-            autoReloadTimer, autoReloadMaximumAmmo, autoReloadY, autoReloadTargetY, slowMotionSpeedMultiplierTarget;
+            autoReloadTimer, autoReloadMaximumAmmo, autoReloadY, autoReloadTargetY, slowMotionSpeedMultiplierTarget,
+            raysAccuracy = 1;
     private int blinkingTime = 30;
     public int[] items;
     private String[] itemNames;
@@ -40,6 +40,8 @@ public class Player extends Healable {
     private static int statsReloadTargetHeight = -56-12-16;
     private static int reloadTargetHeight = -16;
     private float speedX, targetSpeedX, speedY, targetSpeedY, maxSpeed, speedStep, blinkingTimer;
+    private ArrayList<Vector8> rays;
+    public ShadowRenderer shadowRenderer;
 
     public Player(int x, int y) {
         super(x, y, 4, 4, 200, 0, 10, false, false);
@@ -109,6 +111,10 @@ public class Player extends Healable {
         autoReloadTargetY = reloadTargetHeight;
 
         slowMotionSpeedMultiplierTarget = 1d;
+
+        rays = new ArrayList<>();
+
+        shadowRenderer = new ShadowRenderer();
 
         cm = new AABBCollisionManager(this, Main.collisionMap);
     }
@@ -279,19 +285,107 @@ public class Player extends Healable {
                 autoReloadTimer+=Main.toSlowMotion(1d);
 
                 if(autoReloadTimer >= autoReloadTime) {
-                    if(clip > 0) {
-                        clip--;
-                        ammo = maxAmmo;
-                        autoReloadTimer = 0;
-                        autoReloadBlinkingTimer = 0;
-                        waitingForRelease = true;
-                    }
+                    clip--;
+                    ammo = maxAmmo;
+                    autoReloadTimer = 0;
+                    autoReloadBlinkingTimer = 0;
+                    waitingForRelease = true;
                 }
             }
         } else {
             autoReloadBlinkingTimer = 0;
             autoReloadTimer = 0;
         }
+
+        /*
+        // ---- Shadow caster V 0.1 ----
+        rays.clear();
+        long timeStart = System.nanoTime();
+        double rayAccuracy = 1d/ raysAccuracy;
+        double maxDistance = core.width;
+        long averageTime = 0;
+        for(double j = 0; j < 360; j+=rayAccuracy) {
+            double addX = Math.cos(Math.toRadians(j));
+            double addY = Math.sin(Math.toRadians(j));
+            double xx = x;
+            double yy = y;
+            double distance = 0;
+
+            while(distance < maxDistance) {
+                distance = Fly.distance(x, y, xx, yy);
+                long timeStart2 = System.nanoTime();
+                if(Main.collisionMap.collisionAt((int)xx, (int)yy)) {
+                    break;
+                }
+                long timeEnd2 = System.nanoTime();
+                averageTime += timeEnd2-timeStart2;
+                xx += addX;
+                yy += addY;
+            }
+
+            rays.add(new Vector4((int)(xx+addX), (int)(yy+addY), (int)(xx+addX*8), (int)(yy+addY*8)));
+        }
+        long timeEnd = System.nanoTime();
+        System.out.println("Checking rays took an average of "+String.valueOf(averageTime/(360d/rayAccuracy))+"ns");
+        System.out.println("Checking rays took a total of "+String.valueOf(averageTime)+"ns");
+        System.out.println("Calculating rays took a "+String.valueOf(timeEnd-timeStart)+"ns");*/
+
+
+    }
+
+    public void castRays() {
+        // ---- Shadow Caster V 0.2 ----
+        long start = System.nanoTime();
+        rays.clear();
+        int iterations = 0;
+        int raysCast = 0;
+        for(GameObject obj : Main.main.visibleChunkObjects) {
+            if(obj.mask == null) continue;
+            else if(!(obj.mask instanceof Mask.Rectangle)) continue;
+            else if(obj instanceof Healable) continue;
+            else if(!obj.solid) continue;
+            iterations++;
+
+            Mask.Rectangle mask = (Mask.Rectangle) obj.aabbComponent.area;
+            double minAngle = Double.MAX_VALUE;
+            Point minPoint = null;
+            double maxAngle = Double.MIN_VALUE;
+            Point maxPoint = null;
+            double currentDistance;
+
+            rays.add(new Vector8((int)mask.x, (int)mask.y,
+                    (int)(mask.x+mask.w), (int)mask.y,
+                    (int)(mask.x+mask.w), (int)(mask.y+mask.h),
+                    (int)mask.x, (int)(mask.y+mask.h)));
+            for(int j = 0; j < 4; j++) {
+//                Point current = new Point(mask.x + (((j+1) % 2 == 0) ? mask.w : 0), mask.y + ((j % 2 == 0) ? mask.h : 0));
+//                Point next = new Point(mask.x + (((j+2) % 2 == 0) ? mask.w : 0), mask.y + (((j+1) % 2 == 0) ? mask.h : 0));
+
+                Point current = findCorner(j, mask);
+                Point next = findCorner(j+1, mask);
+
+                double disCurrent = Fly.angle(x, y, current.x, current.y);
+                double disNext = Fly.angle(x, y, next.x, next.y);
+
+                rays.add(new Vector8((int)current.x, (int)current.y, (int)(current.x+ Math.cos(Math.toRadians(disCurrent-180))*320),
+                                (int)(current.y+ Math.sin(Math.toRadians(disCurrent-180))*320), (int)(next.x+Math.cos(Math.toRadians(disNext-180))*320),
+                        (int)(next.y+ Math.sin(Math.toRadians(disNext-180))*320), (int)next.x, (int)next.y));
+                raysCast++;
+            }
+
+            /*if(minPoint != null && maxPoint != null) {
+                rays.add(new Vector8((int) minPoint.x, (int) minPoint.y,
+                        (int) (x + Math.cos(Math.toRadians(minAngle-180)) * 320d),
+                        (int) (y + Math.sin(Math.toRadians(minAngle-180)) * 320d),
+                        (int) (x + Math.cos(Math.toRadians(maxAngle-180)) * 320d),
+                        (int) (y + Math.sin(Math.toRadians(maxAngle-180)) * 320d),
+                        (int) maxPoint.x, (int) maxPoint.y));
+                raysCast++;
+            }*/
+
+        }
+        long end = System.nanoTime();
+        System.out.println("Casted "+raysCast+" rays of "+iterations+" objects, took "+(end-start)+" ns");
     }
 
     @Override
@@ -304,9 +398,37 @@ public class Player extends Healable {
 //        r.fillRectangle(x, y, 16, 16, new Color(40, 100, 70));
     }
 
-    public void renderInventory(Renderer r) {
-        r.absolute();
-        r.relative();
+    public void renderRays(Renderer r) {
+        r.setColor(new Color(
+                Main.grassColor.getRed()-10,
+                Main.grassColor.getGreen()-10,
+                Main.grassColor.getBlue()-10
+        ));
+        int addX = (int)-Main.main.camera.cX;
+        int addY = (int)-Main.main.camera.cY;
+        Graphics2D g2d = (Graphics2D) r.getG();
+        g2d.setStroke(new BasicStroke(1));
+//        for(Vector4 vec : rays)
+//            r.getG().drawLine(vec.x1+addX, vec.y1+addY, vec.x2+addX, vec.y2+addY);
+//        g2d.translate((double)addX, (double)addY);
+        for(Vector8 vec : rays) {
+            if(Main.main.showDebugInfo)
+                g2d.drawPolygon(new int[]{vec.x1+addX, vec.x2+addX, vec.x3+addX, vec.x4+addX},
+                        new int[]{vec.y1+addY, vec.y2+addY, vec.y3+addY, vec.y4+addY}, 4);
+            else {
+                g2d.fill(new Polygon(new int[]{vec.x1+addX, vec.x2+addX, vec.x3+addX, vec.x4+addX},
+                        new int[]{vec.y1+addY, vec.y2+addY, vec.y3+addY, vec.y4+addY}, 4));
+//                g2d.fillPolygon(new int[]{vec.x1, vec.x4, vec.x3},
+//                        new int[]{vec.y1, vec.y4, vec.y3}, 3);
+//                g2d.fillPolygon(new int[]{vec.x1, vec.x2, vec.x3},
+//                        new int[]{vec.y1, vec.y2, vec.y3}, 3);
+            }
+//            g2d.fillOval(vec.x1-4, vec.y1-4, 8, 8);
+//            g2d.fillOval(vec.x2-4, vec.y2-4, 8, 8);
+//            g2d.fillOval(vec.x3-4, vec.y3-4, 8, 8);
+//            g2d.fillOval(vec.x4-4, vec.y4-4, 8, 8);
+        }
+//        g2d.translate((double)-addX, (double)-addY);
     }
 
     @Override
@@ -317,6 +439,107 @@ public class Player extends Healable {
     @Override
     public void shareReceive(String s) {
 
+    }
+
+    public static class Vector4 {
+        public int x1, y1, x2, y2;
+
+        public Vector4(int x1, int y1, int x2, int y2) {
+            this.x1 = x1;
+            this.y1 = y1;
+            this.x2 = x2;
+            this.y2 = y2;
+        }
+    }
+
+    public static class Vector8 {
+        public int x1, y1, x2, y2, x3, y3, x4, y4;
+
+        public Vector8(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4) {
+            this.x1 = x1;
+            this.y1 = y1;
+            this.x2 = x2;
+            this.y2 = y2;
+            this.x3 = x3;
+            this.y3 = y3;
+            this.x4 = x4;
+            this.y4 = y4;
+        }
+    }
+
+    static Point getIntersectionPoint(Point A, Point B, Point P) {
+        Point abDir = B.minus(A);
+        Point perpareDir = new Point(-abDir.x, abDir.y);
+        Point apDir = P.minus(A);
+        double s = (perpareDir.y * apDir.x - perpareDir.x * apDir.y)
+                / (abDir.x * perpareDir.y - abDir.y * perpareDir.x);
+        return A.plus(abDir.scale(s));
+    }
+
+    public static class Point {
+        public double x, y;
+
+        public Point(double x, double y) {
+            this.x = x;
+            this.y = y;
+        }
+
+        Point scale(double k) {
+            return new Point(x * k, y * k);
+        }
+
+        Point plus(Point add) {
+            return new Point(x + add.x, y + add.y);
+        }
+
+        Point minus(Point minus) {
+            return new Point(x - minus.x, y - minus.y);
+        }
+    }
+
+    public Point findCorner(int number, Mask.Rectangle mask) {
+        switch (number%4) {
+            case 0:
+                return new Point(mask.x, mask.y);
+            case 1:
+                return new Point(mask.x+mask.w, mask.y);
+            case 2:
+                return new Point(mask.x+mask.w, mask.y+mask.h);
+            case 3:
+                return new Point(mask.x, mask.y+mask.h);
+            default:
+                return null;
+        }
+    }
+
+    public class ShadowRenderer extends GameObject {
+
+        public ShadowRenderer() {
+            super(14, 6);
+
+            // HERE: Fix depth
+            depth = random.nextInt(1023)+depth*1024;
+        }
+
+        @Override
+        public void update(Input input) {
+
+        }
+
+        @Override
+        public void render(Renderer r) {
+            renderRays(r);
+        }
+
+        @Override
+        public String shareSend() {
+            return null;
+        }
+
+        @Override
+        public void shareReceive(String s) {
+
+        }
     }
 
 }

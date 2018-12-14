@@ -35,6 +35,7 @@ public class Tree extends GameObject {
         leaf = new ArrayList<>();
         brunches = new ArrayList<>();
         type = random.nextBoolean() ? TYPE_SAVANNA : TYPE_OAK;
+        solid = true;
 
         // HERE: Bush gen V 1.0
         Rectangle bounds = null;
@@ -83,6 +84,7 @@ public class Tree extends GameObject {
             mask = new Mask.Rectangle((double) bounds.x, (double) bounds.y,
                     bounds.width, bounds.height);
             aabbComponent = new AABBComponent(new Mask.Rectangle(x-8, y-8, 16, 16));
+//            mask = new Mask.Rectangle(x-8, y-8, 16, 16);
         }
     }
 

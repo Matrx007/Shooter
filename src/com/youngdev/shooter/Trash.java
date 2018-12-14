@@ -19,7 +19,7 @@ public class Trash extends GameObject {
     public static final int TYPE_BRANCHES = 1, TYPE_WATER = 2, TYPE_MUD = 3;
 
     public Trash(int x, int y) {
-        super(10, 3);
+        super(10, 1);
         this.x = x;
         this.y = y;
         random = new Random();

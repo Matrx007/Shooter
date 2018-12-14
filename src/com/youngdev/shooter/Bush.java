@@ -18,7 +18,7 @@ public class Bush extends GameObject {
     private boolean prevCollision, fliesInside;
 
     public Bush(int x, int y) {
-        super(11, 6);
+        super(11, 7);
         this.x = x;
         this.y = y;
         this.fliesInside = true;

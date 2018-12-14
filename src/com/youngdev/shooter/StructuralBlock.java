@@ -17,7 +17,7 @@ public class StructuralBlock extends GameObject {
     public static final int TYPE_ROCKS = 1, TYPE_WOOD = 2, TYPE_FIBER = 3, TYPE_WOOD_FLOORING = 4;
 
     public StructuralBlock(int x, int y, int type) {
-        super(8, 14);
+        super(8, 8);
         this.type = type;
         this.x = x;
         this.y = y;

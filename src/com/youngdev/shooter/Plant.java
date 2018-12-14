@@ -16,7 +16,7 @@ public class Plant extends GameObject {
     private Random random;
     
     public Plant(int x, int y, Color color) {
-        super(6, 4);
+        super(6, 2);
         this.x = x;
         this.y = y;
         this.prevCollision = false;
