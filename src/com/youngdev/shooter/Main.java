@@ -20,8 +20,13 @@ import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.lang.reflect.Constructor;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -39,7 +44,7 @@ public class Main extends Game {
     private static int chunkXBottomRight;
     private static int chunkYBottomRight;
     public static int width = 320;
-    public static int height = 240;
+    public static int height = 180;
     private int timer, time=120;
     private boolean found, findOnScreenBlocked, findOnScreenCalled;
     private boolean usesChunkRenderer;
@@ -58,6 +63,17 @@ public class Main extends Game {
     private BufferedImage[] buttonImages;
     private ArrayList<UniParticle> startMenuButtonParticles;
 
+    // HERE: Server stuff
+    private static boolean isServer;
+    private static int port;
+    private static String ip;
+    private int clientId;
+    private ArrayList<Socket> clients;
+    private Map<Integer, Player> players;
+    private Map<Integer, GameObject> objects;
+    private Socket socket;
+    private ServerSocket serverSocket;
+
     public Cursor cursor;
 
     public static Color grassColor = new Color(80, 140, 110);
@@ -69,6 +85,22 @@ public class Main extends Game {
     List<Fly> flies;
 
     public static void main(String[] args) {
+        if(args.length == 0) {
+            isServer = false;
+            port = 25664;
+        } else {
+            if(args.length > 1 && args[0].equals("port")) {
+                port = Integer.parseInt(args[1]);
+                if(port == -1) {
+                    port = 25664;
+                }
+                isServer = true;
+                if(args.length > 3 && args[2].equals("ip")) {
+                    ip = args[3];
+                    isServer = false;
+                }
+            }
+        }
         new Main();
     }
 
@@ -76,18 +108,73 @@ public class Main extends Game {
 
     public Main() {
         main = this;
-        width = 320;
-        height = 240;
+        int size = 25;
+        width = 16*size;
+        height = 9*size;
 
         e.width = width;
         e.height = height;
         e.scale = 3f;
+//        e.startAsFullscreen = true;
 
         showDebugInfo = false;
 
         e.start();
 
         // HERE: Init
+
+        if(isServer) {
+            clients = new ArrayList<>();
+            try {
+                serverSocket = new ServerSocket(25664);
+            } catch (IOException e1) {
+                e1.printStackTrace();
+                System.exit(-2);
+            }
+            new Thread(() -> {
+                try {
+                    Socket acceptedSocket = serverSocket.accept();
+                    new Thread(() -> {
+                        try {
+                            // New thread for new client/connection
+                            // HERE: Client communication logic
+                            DataInputStream inputStreamReader = new DataInputStream(acceptedSocket.getInputStream());
+
+                            while (acceptedSocket.isConnected()) {
+                                int dataSize = inputStreamReader.readInt();
+                                byte[] data = new byte[dataSize];
+                                inputStreamReader.readFully(data);
+
+                                switch (fetchInt(data, 0)) {
+                                    case 127:
+                                        // HERE: Player
+                                        Player target = players.get(fetchInt(data, 4));
+                                        applyChanges(target, data);
+                                        break;
+                                    case 128:
+                                        // HERE:
+                                        break;
+                                }
+                            }
+                        } catch (Exception e) {
+                            try {
+                                clients.remove(acceptedSocket);
+                                acceptedSocket.close();
+                            } catch (IOException ignored) {}
+                        }
+                    }).start();
+                    clients.add(acceptedSocket);
+                } catch (IOException ignored) {}
+            }).start();
+        } else {
+            try {
+                socket = new Socket("localhost", 25664);
+            } catch (IOException e1) {
+                e1.printStackTrace();
+//                System.exit(-2);
+            }
+        }
+
         AABBCollisionManager.MAX_UNSTUCK_TRIES = 32;
 
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
@@ -154,7 +241,7 @@ public class Main extends Game {
                 new Point(),
                 null ));
 
-        String text = "Go huntin'";
+        String text = "Jookse peida";
 
 //        g2.setColor(new Color());
 //        g2.fill;
@@ -179,9 +266,11 @@ public class Main extends Game {
                 32);
 
         buttonLabels = new String[] {
-                "Play",
-                "Credits",
-                "Rage Quit"
+                "Ühenda serveriga",
+                "Alusta server",
+                "Mängi üksi",
+                "Krediidid",
+                "Lahku"
         };
         numButtons = 3;
         buttonImages = new BufferedImage[numButtons];
@@ -226,18 +315,18 @@ public class Main extends Game {
             chunk.add(new Rocks(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY));
         }
 
-        for(int i = 0; i < random.nextInt(3); i++) {
+        for(int i = 0; i < random.nextInt(7); i++) {
             Color clr = new Color(random.nextInt(135)+100,random.nextInt(135)+100,random.nextInt(135)+100);
 //            Color clr = new Color(Color.HSBtoRGB(random.nextFloat(), 1f, 1f));
 //            System.out.println(clr);
             chunk.add(new Plant(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY, clr));
         }
 
-        for(int i = 0; i < random.nextInt(2); i++) {
+        for(int i = 0; i < random.nextInt(4); i++) {
             chunk.add(new Terrain(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY, random.nextInt(2)+1));
         }
 
-        if(random.nextInt(4)==1) {
+        if(random.nextInt(3)==1) {
             chunk.add(new Trash(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY));
         }
 
@@ -732,10 +821,7 @@ public class Main extends Game {
         hoverChunkX=i.getRelativeMouseX()/chunkSize;
         hoverChunkY=i.getRelativeMouseY()/chunkSize;
 
-        if(i.isButton(1) && showDebugInfo) {
-//            // Place new tree, debug only!
-//            world.add(new Bush(i.getMouseX(), i.getMouseY()));
-
+        if(i.isButtonDown(1) && showDebugInfo) {
             // HERE: Generate selected chunk
             deleteChunk(hoverChunkX, hoverChunkY);
             generateChunk(hoverChunkX, hoverChunkY);
@@ -808,6 +894,7 @@ public class Main extends Game {
             return new Color(cr, cg, cb);
         };
 
+        Filter passThrough = (newC, oldC) -> newC;
 
         Filter slowMotionOverlay = (newC, oldC) -> {
             float amount = camera.bluishEffect;
@@ -822,13 +909,13 @@ public class Main extends Game {
             cb = cb * (1 - (amount * 0.25)) + grayScaleColor * (amount * 0.25);
 
             cg = Math.max(0, Math.min(255, cg));
-            cr = Math.max(0, Math.min(255, cr * 1.25d));
+            cr = Math.max(0, Math.min(255, cr * (1d+0.25d*amount)));
             cb = Math.max(0, Math.min(255, cb));
 
             return new Color((int) cr, (int) cg, (int) cb, newC.getAlpha());
         };
 
-        r.setFilter(0, slowMotionOverlay);
+        r.setFilter(0, passThrough);
 
         /*r.setFilter(0, (newC, oldC) -> {
             newC = new Color(64, 64, 64, 64);
@@ -999,10 +1086,6 @@ public class Main extends Game {
             r.drawText("Entities: " + entities.size(), 8, y, 10, Color.black);
 
             y += addY;
-            r.drawText("CamX: " + camera.cX, 8, y, 10, Color.black);
-            y += addY;
-            r.drawText("CamY: " + camera.cY, 8, y, 10, Color.black);
-            y += addY;
             r.drawText("PlayerX: " + player.xx, 8, y, 10, Color.black);
             y += addY;
             r.drawText("PlayerY: " + player.yy, 8, y, 10, Color.black);
@@ -1012,7 +1095,9 @@ public class Main extends Game {
             y += addY;
             r.drawText("Flies: " + flies.size(), 8, y, 10, Color.black);
             y += addY;
-            r.drawText("Visible objects: " + visibleChunkObjects.size(), 8, y, 10, Color.black);
+            r.drawText("Visible chunk objects: " + visibleChunkObjects.size(), 8, y, 10, Color.black);
+            y += addY;
+            r.drawText("Visible chunk objects contains Player: " + visibleChunkObjects.contains(player), 8, y, 10, Color.black);
         }
         r.relative();
         r.clearFilters();
@@ -1034,4 +1119,159 @@ public class Main extends Game {
         r.relative();
         cursor.render(r);
     }
+
+
+    // HERE: -===- Multiplayer Stuff -===-
+
+    public byte[] convertToBytes(int... args) {
+        byte[] bytes = new byte[args.length];
+
+        int i = 0;
+        for(int j : args) {
+
+            bytes[i] = (byte) (j >> 24);
+            bytes[i+1] = (byte) (j >> 16);
+            bytes[i+2] = (byte) (j >> 8);
+            bytes[i+3] = (byte) (j);
+
+            i += 4;
+        }
+
+        return bytes;
+    }
+
+    public byte[] convertToByte(int a) {
+        byte[] bytes = new byte[4];
+        bytes[0] = (byte) (a >> 24);
+        bytes[1] = (byte) (a >> 16);
+        bytes[2] = (byte) (a >> 8);
+        bytes[3] = (byte) (a);
+        return bytes;
+    }
+
+    public void applyChanges(GameObject obj, byte[] data) {
+        if(obj instanceof Player) {
+            obj.x = fetchInt(data,4);
+            obj.y = fetchInt(data,8);
+        } else if(obj instanceof Fly) {
+            obj.x = fetchInt(data,4);
+            obj.y = fetchInt(data,8);
+        } else if(obj instanceof Tree) {
+            obj.x = fetchInt(data,4);
+            obj.y = fetchInt(data,8);
+        } else if(obj instanceof Bush) {
+            obj.x = fetchInt(data,4);
+            obj.y = fetchInt(data,8);
+            ((Mask.Rectangle)obj.mask).w = fetchInt(data, 12);
+            ((Mask.Rectangle)obj.mask).h = fetchInt(data, 16);
+        } else if(obj instanceof Rabbit) {
+            obj.x = fetchInt(data,4);
+            obj.y = fetchInt(data,8);
+            ((Rabbit) obj).direction = fetchInt(data, 12);
+            ((Rabbit) obj).directionTarget = fetchInt(data, 16);
+        } else if(obj instanceof Trash) {
+            if(((Trash) obj).type == Trash.TYPE_MUD ||
+                    ((Trash) obj).type == Trash.TYPE_WATER) {
+                obj.x = fetchInt(data, 4);
+                obj.y = fetchInt(data, 8);
+            } else if(((Trash) obj).type == Trash.TYPE_BRANCHES) {
+                obj.x = fetchInt(data, 4);
+                obj.y = fetchInt(data, 8);
+                int i = 0;
+                for(UniParticle particle : ((Trash) obj).particles) {
+                    particle.x = fetchInt(data, 8+i*8);
+                    particle.y = fetchInt(data, 8+i*8+4);
+                    i += 1;
+                }
+            }
+        }
+    }
+
+    public byte[] convertFromObject(GameObject obj) {
+        byte[] bytes = null;
+        if(obj instanceof Player) {
+            bytes = new byte[12];
+            System.arraycopy(convertToByte(clientId), 0, bytes, 0, 4);
+            System.arraycopy(convertToByte((int)obj.x), 0, bytes, 4, 4);
+            System.arraycopy(convertToByte((int)obj.y), 0, bytes, 8, 4);
+        } else if(obj instanceof Fly) {
+            bytes = new byte[12];
+            System.arraycopy(convertToByte(obj.hashCode()), 0, bytes, 0, 4);
+            System.arraycopy(convertToByte((int)obj.x), 0, bytes, 4, 4);
+            System.arraycopy(convertToByte((int)obj.y), 0, bytes, 8, 4);
+        } else if(obj instanceof Tree) {
+            bytes = new byte[12];
+            System.arraycopy(convertToByte(obj.hashCode()), 0, bytes, 0, 4);
+            System.arraycopy(convertToByte((int)obj.x), 0, bytes, 4, 4);
+            System.arraycopy(convertToByte((int)obj.y), 0, bytes, 8, 4);
+        } else if(obj instanceof Bush) {
+            bytes = new byte[20];
+            System.arraycopy(convertToByte(obj.hashCode()), 0, bytes, 0, 4);
+            System.arraycopy(convertToByte((int)obj.x), 0, bytes, 4, 4);
+            System.arraycopy(convertToByte((int)obj.y), 0, bytes, 8, 4);
+            System.arraycopy(convertToByte(((Mask.Rectangle)obj.mask).w), 0, bytes, 12, 4);
+            System.arraycopy(convertToByte(((Mask.Rectangle)obj.mask).h), 0, bytes, 16, 4);
+        } else if(obj instanceof Rabbit) {
+            bytes = new byte[20];
+            System.arraycopy(convertToByte(obj.hashCode()), 0, bytes, 0, 4);
+            System.arraycopy(convertToByte((int)obj.x), 0, bytes, 4, 4);
+            System.arraycopy(convertToByte((int)obj.y), 0, bytes, 8, 4);
+            System.arraycopy(convertToByte((int)(((Rabbit) obj).direction)), 0, bytes, 12, 4);
+            System.arraycopy(convertToByte((int)(((Rabbit) obj).directionTarget)), 0, bytes, 16, 4);
+        } else if(obj instanceof Trash) {
+            if(((Trash) obj).type == Trash.TYPE_MUD ||
+                    ((Trash) obj).type == Trash.TYPE_WATER) {
+                bytes = new byte[12];
+                System.arraycopy(convertToByte(obj.hashCode()), 0, bytes, 0, 4);
+                System.arraycopy(convertToByte((int)obj.x), 0, bytes, 4, 4);
+                System.arraycopy(convertToByte((int)obj.y), 0, bytes, 8, 4);
+            } else if(((Trash)obj).type == Trash.TYPE_BRANCHES) {
+                bytes = new byte[12 + ((Trash) obj).particles.size() * 8];
+                System.arraycopy(convertToByte(obj.hashCode()), 0, bytes, 0, 4);
+                System.arraycopy(convertToByte((int) obj.x), 0, bytes, 4, 4);
+                System.arraycopy(convertToByte((int) obj.y), 0, bytes, 8, 4);
+                int i = 0;
+                for (UniParticle particle : ((Trash) obj).particles) {
+                    System.arraycopy(convertToByte(particle.x), 0, bytes, 12 + i * 8, 4);
+                    System.arraycopy(convertToByte(particle.y), 0, bytes, 12 + i * 8 + 4, 4);
+                    i++;
+                }
+            }
+        }
+        return bytes;
+    }
+
+    public byte[] unsign(byte[] bytes) {
+        byte[] newArray = new byte[bytes.length-1];
+        System.arraycopy(bytes, 0, newArray, 0, bytes.length-1);
+        return newArray;
+    }
+
+    public byte[] sign(byte[] bytes) {
+        byte[] newBytes = new byte[bytes.length+4];
+        System.arraycopy(bytes, 0, newBytes, 4, bytes.length);
+        System.arraycopy(convertToByte(bytes.length), 0, newBytes, 0, 4);
+        return newBytes;
+    }
+
+    public byte[] sign(byte[] bytes, byte... args) {
+        byte[] newBytes = new byte[bytes.length+args.length+4*args.length];
+        System.arraycopy(args, 0, newBytes, 0, args.length);
+        int i = 0;
+        for(byte arg : args) {
+            System.arraycopy(convertToByte(args[i]), 0, newBytes, i*4, 4);
+            i++;
+        }
+        return newBytes;
+    }
+
+    public int fetchInt(byte[] array, int offset) {
+        return toInt(array[offset], array[offset+1], array[offset+2], array[offset+3]);
+    }
+
+    public int toInt(byte b1, byte b2, byte b3, byte b4) {
+        return  ((0xFF & b1) << 24) | ((0xFF & b2) << 16) |
+                ((0xFF & b3) << 8) | (0xFF & b4);
+    }
+
 }

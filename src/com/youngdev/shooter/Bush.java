@@ -18,7 +18,7 @@ public class Bush extends GameObject {
     private boolean prevCollision, fliesInside;
 
     public Bush(int x, int y) {
-        super(11, 7);
+        super(11, 11);
         this.x = x;
         this.y = y;
         this.fliesInside = true;
@@ -34,21 +34,23 @@ public class Bush extends GameObject {
         // HERE: Bush gen V 1.0
         Rectangle bounds = spawnLeaf(24, 36, 24,
                 0, 0);
-        int numBerries = 5+random.nextInt(5);
-        for(int i = 0; i < numBerries; i++) {
-            double distance = random.nextDouble()*30;
-            double angle = random.nextDouble()*360;
-            int xx = (int)(x+Math.cos(Math.toRadians(angle))*distance);
-            int yy = (int)(y+Math.sin(Math.toRadians(angle))*distance);
+        if(random.nextInt(6)==1) {
+            int numBerries = 5 + random.nextInt(5);
+            for (int i = 0; i < numBerries; i++) {
+                double distance = random.nextDouble() * 30;
+                double angle = random.nextDouble() * 360;
+                int xx = (int) (x + Math.cos(Math.toRadians(angle)) * distance);
+                int yy = (int) (y + Math.sin(Math.toRadians(angle)) * distance);
 
-            Leaf berry = new Leaf(xx, yy, 5, random.nextInt(10)-5,
-                    random.nextInt(359));
-            berry.baseColor = new Color(100, 40, 40);
-            leaf.add(berry);
+                Leaf berry = new Leaf(xx, yy, 5, random.nextInt(10) - 5,
+                        random.nextInt(359));
+                berry.baseColor = new Color(100, 40, 40);
+                leaf.add(berry);
+            }
         }
 
 
-        mask = new Mask.Rectangle((double)bounds.x, (double)bounds.y, bounds.width, bounds.height);
+        mask = new Mask.Rectangle((double)bounds.x+1, (double)bounds.y+1, bounds.width-2, bounds.height-2);
         this.aabbComponent = new AABBComponent(mask);
     }
 
@@ -59,7 +61,7 @@ public class Bush extends GameObject {
         Iterator<GameObject> it;
         for(it = Main.main.visibleChunkObjects.iterator(); it.hasNext();) {
             GameObject obj = it.next();
-            if (obj instanceof Arrow || (obj instanceof Healable && obj.depth > this.depth))
+            if (obj instanceof Arrow || (obj instanceof Healable))
                 if(obj.mask != null)
                     if (obj.mask.isColliding(mask) ||
                             Fly.distance(x, y, obj.x, obj.y) < 64) {

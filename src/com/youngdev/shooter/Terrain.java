@@ -32,8 +32,12 @@ public class Terrain extends GameObject {
                 range = random.nextInt(32)+48;
                 int num = random.nextInt(24)+24;
                 for(int i = 0; i < num; i++) {
-                    int xx = x-random.nextInt(range*2)+range;
-                    int yy = y-random.nextInt(range*2)+range;
+                    int angle = random.nextInt(359);
+                    int distance = (int)(Math.abs(random.nextGaussian())*range);
+                    int xx = x+(int)(Math.cos(Math.toRadians(angle))*distance);
+                    int yy = y+(int)(Math.sin(Math.toRadians(angle))*distance);
+//                    int xx = x-random.nextInt(range*2)+range;
+//                    int yy = y-random.nextInt(range*2)+range;
                     int size = random.nextInt(6)+5;
                     int tone = random.nextInt(20);
                     Color baseColor = new Color(60, 120, 90);
@@ -48,12 +52,12 @@ public class Terrain extends GameObject {
                 }
                 break;
             case TYPE_SMALL_ROCKS:
-                range = random.nextInt(16)+32;
-                num = random.nextInt(24)+12;
+                range = random.nextInt(32)+48;
+                num = random.nextInt(48)+24;
                 for(int i = 0; i < num; i++) {
                     int xx = x-random.nextInt(range*2)+range;
                     int yy = y-random.nextInt(range*2)+range;
-                    int size = random.nextInt(1)+2;
+                    int size = random.nextInt(3)+2;
                     int tone = random.nextInt(20);
                     Color baseColor = new Color(80, 80, 80);
                     Color color = new Color(baseColor.getRed()+tone,

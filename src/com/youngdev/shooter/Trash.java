@@ -12,14 +12,15 @@ import java.util.Random;
 
 public class Trash extends GameObject {
 
-    private int type;
+    int type;
     private Random random;
-    private ArrayList<UniParticle> particles;
+    ArrayList<UniParticle> particles;
 
     public static final int TYPE_BRANCHES = 1, TYPE_WATER = 2, TYPE_MUD = 3;
 
     public Trash(int x, int y) {
         super(10, 1);
+        this.depth = 1;
         this.x = x;
         this.y = y;
         random = new Random();
@@ -28,6 +29,8 @@ public class Trash extends GameObject {
 //        this.type = TYPE_BRANCHES;
 
         particles = new ArrayList<>();
+
+        int depth = 0;
 
         switch (type) {
             case TYPE_BRANCHES:
@@ -93,21 +96,26 @@ public class Trash extends GameObject {
                             speedY *= 0.5;
 
                             boolean found = false;
+                            boolean move = random.nextBoolean();
                             Player player = Main.main.player;
                             if(Fly.distance(owner.x, owner.y, player.x, player.y) < 16d) {
-                                speedX = Math.cos(Math.toRadians(
-                                        Fly.angle(player.x, player.y, owner.x, owner.y)-180));
-                                speedY = Math.sin(Math.toRadians(
-                                        Fly.angle(player.x, player.y, owner.x, owner.y)-180));
+                                if(move) {
+                                    speedX = Math.cos(Math.toRadians(
+                                            Fly.angle(player.x, player.y, owner.x, owner.y) - 180));
+                                    speedY = Math.sin(Math.toRadians(
+                                            Fly.angle(player.x, player.y, owner.x, owner.y) - 180));
+                                }
                                 found = true;
                             } else {
                                 for (GameObject entity : Main.main.entities) {
                                     if(entity instanceof Healable) {
                                         if (Fly.distance(entity.x, entity.y, owner.x, owner.y) < 16d) {
-                                            speedX = Math.cos(Math.toRadians(
-                                                    Fly.angle(entity.x, entity.y, owner.x, owner.y) - 180));
-                                            speedY = Math.sin(Math.toRadians(
-                                                    Fly.angle(entity.x, entity.y, owner.x, owner.y) - 180));
+                                            if(move) {
+                                                speedX = Math.cos(Math.toRadians(
+                                                        Fly.angle(entity.x, entity.y, owner.x, owner.y) - 180));
+                                                speedY = Math.sin(Math.toRadians(
+                                                        Fly.angle(entity.x, entity.y, owner.x, owner.y) - 180));
+                                            }
                                             found = true;
                                             break;
                                         }
@@ -251,7 +259,7 @@ public class Trash extends GameObject {
         }
 
         // HERE: Fix depth
-        this.depth = random.nextInt(1023)+depth*1024;
+        this.depth = this.depth*1024+(depth*128+random.nextInt(128));
     }
 
     @Override

@@ -36,7 +36,7 @@ public class Player extends Healable {
     public int[] items;
     private String[] itemNames;
     private StructuralBlock[] itemSamples;
-    private static Color baseColor = new Color(130, 32, 78); // 170, 32, 128
+    private static Color baseColor = new Color(170, 172, 78); // 170, 32, 128
     private static int statsReloadTargetHeight = -56-12-16;
     private static int reloadTargetHeight = -16;
     private float speedX, targetSpeedX, speedY, targetSpeedY, maxSpeed, speedStep, blinkingTimer;
@@ -116,6 +116,7 @@ public class Player extends Healable {
 
         shadowRenderer = new ShadowRenderer();
 
+        mask = new Mask.Rectangle(x-4, y-4, 8, 8);
         cm = new AABBCollisionManager(this, Main.collisionMap);
     }
 
@@ -335,7 +336,7 @@ public class Player extends Healable {
 
     public void castRays() {
         // ---- Shadow Caster V 0.2 ----
-        long start = System.nanoTime();
+//        long start = System.nanoTime();
         rays.clear();
         int iterations = 0;
         int raysCast = 0;
@@ -367,9 +368,11 @@ public class Player extends Healable {
                 double disCurrent = Fly.angle(x, y, current.x, current.y);
                 double disNext = Fly.angle(x, y, next.x, next.y);
 
-                rays.add(new Vector8((int)current.x, (int)current.y, (int)(current.x+ Math.cos(Math.toRadians(disCurrent-180))*320),
-                                (int)(current.y+ Math.sin(Math.toRadians(disCurrent-180))*320), (int)(next.x+Math.cos(Math.toRadians(disNext-180))*320),
-                        (int)(next.y+ Math.sin(Math.toRadians(disNext-180))*320), (int)next.x, (int)next.y));
+                double size = Fly.distance(0, 0, core.width/2d, core.height/2d);
+
+                rays.add(new Vector8((int)current.x, (int)current.y, (int)(current.x+ Math.cos(Math.toRadians(disCurrent-180))*size),
+                                (int)(current.y+ Math.sin(Math.toRadians(disCurrent-180))*size), (int)(next.x+Math.cos(Math.toRadians(disNext-180))*size),
+                        (int)(next.y+ Math.sin(Math.toRadians(disNext-180))*size), (int)next.x, (int)next.y));
                 raysCast++;
             }
 
@@ -384,8 +387,8 @@ public class Player extends Healable {
             }*/
 
         }
-        long end = System.nanoTime();
-        System.out.println("Casted "+raysCast+" rays of "+iterations+" objects, took "+(end-start)+" ns");
+//        long end = System.nanoTime();
+//        System.out.println("Casted "+raysCast+" rays of "+iterations+" objects, took "+(end-start)+" ns");
     }
 
     @Override
@@ -400,9 +403,9 @@ public class Player extends Healable {
 
     public void renderRays(Renderer r) {
         r.setColor(new Color(
-                Main.grassColor.getRed()-10,
-                Main.grassColor.getGreen()-10,
-                Main.grassColor.getBlue()-10
+                Main.grassColor.getRed()-15,
+                Main.grassColor.getGreen()-15,
+                Main.grassColor.getBlue()-15
         ));
         int addX = (int)-Main.main.camera.cX;
         int addY = (int)-Main.main.camera.cY;
@@ -515,10 +518,7 @@ public class Player extends Healable {
     public class ShadowRenderer extends GameObject {
 
         public ShadowRenderer() {
-            super(14, 6);
-
-            // HERE: Fix depth
-            depth = random.nextInt(1023)+depth*1024;
+            super(14, 0);
         }
 
         @Override

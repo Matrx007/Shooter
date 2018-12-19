@@ -15,7 +15,7 @@ public class Rocks extends GameObject {
     private ArrayList<Rock> rocks;
 
     public Rocks(int x, int y) {
-        super(7, 11);
+        super(7, 7);
         this.x = x;
         this.y = y;
         this.solid = true;

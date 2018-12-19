@@ -4,7 +4,6 @@ import com.engine.libs.game.GameObject;
 import com.engine.libs.game.Mask;
 import com.engine.libs.game.behaviors.AABBComponent;
 import com.engine.libs.input.Input;
-import com.engine.libs.math.BasicMath;
 import com.engine.libs.rendering.Renderer;
 
 import java.awt.*;
@@ -41,16 +40,17 @@ public class Tree extends GameObject {
         Rectangle bounds = null;
         switch (type) {
             case TYPE_OAK:
-                bounds = spawnLeaf(72, 96, 72, 24, 32, 0, 0,
+                bounds = spawnLeaf(36, 48, 96, 16, 64, 0, 0,
                         new Color(29, 87, 18));
                 break;
             case TYPE_SAVANNA:
-                int leafGroups = random.nextInt(5)+3;
+                int leafGroups = random.nextInt(5)+5;
                 int smallestX=Integer.MAX_VALUE, smallestY=Integer.MAX_VALUE,
                         largestX=Integer.MIN_VALUE, largestY=Integer.MIN_VALUE;
                 for(int i = 0; i < leafGroups; i++) {
                     int angle = random.nextInt(359);
-                    int distance = random.nextInt(20)+30;
+//                    int distance = (int)(Math.min(1, Math.abs(random.nextGaussian()))*50);
+                    int distance = random.nextInt(60)+10;
                     int xx = (int)(Math.cos(Math.toRadians(angle))*distance);
                     int yy = (int)(Math.sin(Math.toRadians(angle))*distance);
 
@@ -65,7 +65,7 @@ public class Tree extends GameObject {
                             111+colorTone,
                             44+colorTone);
 
-                    Rectangle tempBounds = spawnLeaf(36, 48, 30,
+                    Rectangle tempBounds = spawnLeaf(36, 48, 55,
                             10, 16, xx, yy, baseColor);
 
                     smallestX = Math.min(smallestX, tempBounds.x);
@@ -156,7 +156,10 @@ public class Tree extends GameObject {
         int smallestX=Integer.MAX_VALUE, smallestY=Integer.MAX_VALUE, largestX=Integer.MIN_VALUE, largestY=Integer.MIN_VALUE;
         for (int i = 0; i < numLeaf; i++) {
             // HERE: Create a leave
-            double distance = random.nextDouble()*distanceLimit;
+//            double distance = generateNonLinearNumber1(random.nextFloat()*10d-5d)*distanceLimit;
+//            double distance = Math.abs(random.nextGaussian()/2.3d)*distanceLimit*2;
+//            double distance = random.nextDouble()*distanceLimit;
+            double distance = (1-Math.sqrt(random.nextDouble()))*distanceLimit;
             double angle = random.nextDouble()*360;
             int xx = (int)(offX+x+Math.cos(Math.toRadians(angle))*distance);
             int yy = (int)(offY+y+Math.sin(Math.toRadians(angle))*distance);
@@ -179,7 +182,7 @@ public class Tree extends GameObject {
     public class Leaf {
         public int x, y, addX, addY, size, tone;
         public double speed, step;
-        public Color baseColor = new Color(49, 107, 38);
+        public Color baseColor = new Color(49, 71, 38);
 
         public Leaf(int x, int y, int size, int tone, int step) {
             this.x = x;
@@ -198,5 +201,13 @@ public class Tree extends GameObject {
                     baseColor.getGreen()+tone,
                     baseColor.getBlue()+tone);
         }
+    }
+
+    public double generateNonLinearNumber1(double x) {
+        return random.nextGaussian();
+    }
+
+    public static double generateNonLinearNumber2(double x) {
+        return Math.max(0d, 1d-Math.max(0d, Math.sqrt(Math.abs(x*1d))));
     }
 }
