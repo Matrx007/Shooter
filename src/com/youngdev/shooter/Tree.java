@@ -17,10 +17,11 @@ public class Tree extends GameObject {
     private ArrayList<Point[]> brunches;
     private Random random;
     private boolean prevCollision, fliesInside;
-    private int type;
+    public int type;
     public static final int TYPE_SAVANNA = 0, TYPE_OAK = 1;
+    public final int Type = 13;
 
-    public Tree(int x, int y) {
+    public Tree(int x, int y, int type) {
         super(11, 20);
         this.depth = 20;
         this.x = x;
@@ -33,7 +34,8 @@ public class Tree extends GameObject {
 
         leaf = new ArrayList<>();
         brunches = new ArrayList<>();
-        type = random.nextBoolean() ? TYPE_SAVANNA : TYPE_OAK;
+//        type = random.nextBoolean() ? TYPE_SAVANNA : TYPE_OAK;
+        this.type = type;
         solid = true;
 
         // HERE: Bush gen V 1.0

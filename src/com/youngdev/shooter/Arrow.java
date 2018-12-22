@@ -20,7 +20,7 @@ public class Arrow extends GameObject {
     public boolean shotByFriendly;
     private static final boolean UseParticles = false;
     public Random random;
-
+    public final int Type = 0;
     public static final float SPEED = 6;
 
     public Arrow(int x, int y, int dir) {

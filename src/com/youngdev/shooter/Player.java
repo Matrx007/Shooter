@@ -25,7 +25,7 @@ public class Player extends Healable {
     public int xx, yy, invSize = 24, midX, midY, selectedItem, time=60, timer, leftHandReload, rightHandReload,
             reloadTime = 50, bulletTimingCap = 5, leftHandBulletTimingCapCounter, leftHandBulletAmountCounter,
             rightHandBulletTimingCapCounter, rightHandBulletAmountCounter, bulletsPerShot = 5, ammo = 34, maxAmmo = 45,
-            clip = 10, money;
+            clip = 10, money, clientId = -1;
     public double lastCoinX, lastCoinY, coinOverlayAlpha, coinOverlayX, coinOverlayY, clipOverlayAlpha,
             clipOverlayRotation, clipOverlayRotationSpeed, clipOverlayRotationTarget, health, healthMax,
             hunger, hungerMax, statsOverlayAlpha, statsOverlayRotation, statsOverlayRotationSpeed,
@@ -42,6 +42,7 @@ public class Player extends Healable {
     private float speedX, targetSpeedX, speedY, targetSpeedY, maxSpeed, speedStep, blinkingTimer;
     private ArrayList<Vector8> rays;
     public ShadowRenderer shadowRenderer;
+    public final int Type = 7;
 
     public Player(int x, int y) {
         super(x, y, 4, 4, 200, 0, 10, false, false);

@@ -14,11 +14,14 @@ public class Terrain extends GameObject {
 
     public static final int TYPE_SMALL_ROCKS = 1,
                             TYPE_DIRT_PATCH = 2;
+    public final int Type = 11;
+    public int type;
 
     public Terrain(int x, int y, int type) {
         super(9, 0);
         this.x = x;
         this.y = y;
+        this.type = type;
 
         // HERE: Fix depth
         Random random = new Random();

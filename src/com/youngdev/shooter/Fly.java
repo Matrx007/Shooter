@@ -13,6 +13,7 @@ public class Fly extends GameObject {
     private boolean state; // TRUE - Idle, FALSE - Fly away
     private double targetX, targetY, angle, speed;
     private Random random;
+    public final int Type = 5;
 
     public Fly(int x, int y) {
         super(3, 15);

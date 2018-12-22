@@ -16,6 +16,7 @@ public class Bush extends GameObject {
     private ArrayList<Leaf> leaf;
     private Random random;
     private boolean prevCollision, fliesInside;
+    public final int Type = 1;
 
     public Bush(int x, int y) {
         super(11, 11);

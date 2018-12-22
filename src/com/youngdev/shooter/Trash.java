@@ -12,20 +12,22 @@ import java.util.Random;
 
 public class Trash extends GameObject {
 
-    int type;
+    public int type;
     private Random random;
     ArrayList<UniParticle> particles;
+    public final int Type = 12;
 
     public static final int TYPE_BRANCHES = 1, TYPE_WATER = 2, TYPE_MUD = 3;
 
-    public Trash(int x, int y) {
+    public Trash(int x, int y, int type) {
         super(10, 1);
         this.depth = 1;
         this.x = x;
         this.y = y;
         random = new Random();
 
-        this.type = random.nextInt(3)+1;
+//        this.type = random.nextInt(3)+1;
+        this.type = type;
 //        this.type = TYPE_BRANCHES;
 
         particles = new ArrayList<>();

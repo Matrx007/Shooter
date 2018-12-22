@@ -16,6 +16,7 @@ public class Plant extends GameObject {
     private boolean prevCollision;
     private Random random;
     private int type;
+    public final int Type = 6;
 
     private static final int TYPE_SINLGE=0, TYPE_PATCH=1;
     

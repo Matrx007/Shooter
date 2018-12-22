@@ -14,6 +14,7 @@ public class Explosion extends GameObject {
     private Random random;
     private int size;
     private ArrayList<UniParticle> particles;
+    public final int Type = 4;
 
     public Explosion(int x, int y, int depth, boolean useAlpha, int range) {
         super(4, depth);

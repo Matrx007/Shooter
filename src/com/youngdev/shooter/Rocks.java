@@ -13,6 +13,7 @@ import java.util.Random;
 public class Rocks extends GameObject {
 
     private ArrayList<Rock> rocks;
+    public final int Type = 9;
 
     public Rocks(int x, int y) {
         super(7, 7);

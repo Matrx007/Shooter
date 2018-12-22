@@ -20,10 +20,7 @@ import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.lang.reflect.Constructor;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -64,15 +61,18 @@ public class Main extends Game {
     private ArrayList<UniParticle> startMenuButtonParticles;
 
     // HERE: Server stuff
-    private static boolean isServer;
+    private static boolean isServer, gtClient;
     private static int port;
     private static String ip;
     private int clientId;
     private ArrayList<Socket> clients;
     private Map<Integer, Player> players;
-    private Map<Integer, GameObject> objects;
+    private Map<Integer, ArrayList<GameObject>> objects;
+    private Map<Integer, Data> data;
     private Socket socket;
     private ServerSocket serverSocket;
+    private GameMode currentGameMode;
+    private boolean acceptingClients;
 
     public Cursor cursor;
 
@@ -85,6 +85,7 @@ public class Main extends Game {
     List<Fly> flies;
 
     public static void main(String[] args) {
+        gtClient = false;
         if(args.length == 0) {
             isServer = false;
             port = 25664;
@@ -98,6 +99,7 @@ public class Main extends Game {
                 if(args.length > 3 && args[2].equals("ip")) {
                     ip = args[3];
                     isServer = false;
+                    gtClient = true;
                 }
             }
         }
@@ -118,57 +120,75 @@ public class Main extends Game {
 //        e.startAsFullscreen = true;
 
         showDebugInfo = false;
+        acceptingClients = false;
 
         e.start();
 
         // HERE: Init
 
+        startMenuMode = true;
         if(isServer) {
+            acceptingClients = true;
             clients = new ArrayList<>();
+            players = new HashMap<>();
+            data = new HashMap<>();
+            objects = new HashMap<>();
             try {
                 serverSocket = new ServerSocket(25664);
             } catch (IOException e1) {
                 e1.printStackTrace();
                 System.exit(-2);
             }
+            startMenuMode = false;
             new Thread(() -> {
                 try {
-                    Socket acceptedSocket = serverSocket.accept();
-                    new Thread(() -> {
-                        try {
-                            // New thread for new client/connection
-                            // HERE: Client communication logic
-                            DataInputStream inputStreamReader = new DataInputStream(acceptedSocket.getInputStream());
+                    while(acceptingClients) {
+                        Socket acceptedSocket = serverSocket.accept();
+                        new Thread(() -> {
+                            try {
+                                // --- New thread for new client/connection ---
 
-                            while (acceptedSocket.isConnected()) {
-                                int dataSize = inputStreamReader.readInt();
-                                byte[] data = new byte[dataSize];
-                                inputStreamReader.readFully(data);
+                                // HERE: Client communication logic
+                                int id = clients.size();
+                                DataInputStream inputStreamReader = new DataInputStream(acceptedSocket.getInputStream());
+                                DataOutputStream outputStreamReader = new DataOutputStream(acceptedSocket.getOutputStream());
 
-                                switch (fetchInt(data, 0)) {
-                                    case 127:
-                                        // HERE: Player
-                                        Player target = players.get(fetchInt(data, 4));
-                                        applyChanges(target, data);
-                                        break;
-                                    case 128:
-                                        // HERE:
-                                        break;
+
+                                //  HERE: Receive info
+                                getData(id).playerName = inputStreamReader.readUTF();
+//                            int dataSize = inputStreamReader.readInt();
+//                            byte[] data = new byte[dataSize];
+
+                                // HERE: Send info
+                                ArrayList<Byte> bytes = new ArrayList<>();
+                                addAllBytes(bytes, convertToBytes(id));
+                                outputStreamReader.write(toByteArray(new Byte[0]));
+
+                                // HERE: Finally add client to clients list
+                                clients.add(clientId, acceptedSocket);
+                                Point startPoint = currentGameMode.getPlayerJoinPosition();
+                                players.put(clientId, new Player(startPoint.x, startPoint.y));
+
+                                for(GameObject obj : objects.get(id)) {
+
+                                }
+
+                            } catch (Exception e) {
+                                try {
+                                    acceptedSocket.close();
+                                } catch (IOException ignored) {
                                 }
                             }
-                        } catch (Exception e) {
-                            try {
-                                clients.remove(acceptedSocket);
-                                acceptedSocket.close();
-                            } catch (IOException ignored) {}
-                        }
-                    }).start();
-                    clients.add(acceptedSocket);
+                        }).start();
+                    }
                 } catch (IOException ignored) {}
             }).start();
-        } else {
+        }
+
+         if (gtClient) {
             try {
                 socket = new Socket("localhost", 25664);
+                startMenuMode = false;
             } catch (IOException e1) {
                 e1.printStackTrace();
 //                System.exit(-2);
@@ -278,7 +298,7 @@ public class Main extends Game {
         startMenuButtonParticles = new ArrayList<>();
 
         for(int i = 0; i < numButtons; i++) {
-            BufferedImage image = RenderUtils.createImage(96, 24);
+            BufferedImage image = RenderUtils.createImage(192, 24);
             Graphics2D g = (Graphics2D) image.getGraphics();
             g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
                     RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
@@ -327,7 +347,7 @@ public class Main extends Game {
         }
 
         if(random.nextInt(3)==1) {
-            chunk.add(new Trash(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY));
+            chunk.add(new Trash(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY, random.nextInt(3)+1));
         }
 
         if(random.nextInt(5)==3) {
@@ -363,7 +383,8 @@ public class Main extends Game {
 
         if(random.nextInt(6)==1) {
             chunk.add(new Tree(minX + random.nextInt(chunkSize),
-                    minY + random.nextInt(chunkSize)));
+                    minY + random.nextInt(chunkSize), random.nextBoolean() ?
+                    Tree.TYPE_SAVANNA : Tree.TYPE_OAK));
         }
 
         getChunkArray(x, y).addAll(chunk);
@@ -382,7 +403,7 @@ public class Main extends Game {
 
     public CopyOnWriteArrayList<GameObject> getAndGenerateChunk(int x, int y) {
         Point loc = new Point(x, y);
-        if(!chunks.containsKey(loc)) {
+        if(!chunks.containsKey(loc) && (isServer || startMenuMode)) {
             generateChunk(loc.x, loc.y);
         }
         return chunks.get(loc);
@@ -398,9 +419,20 @@ public class Main extends Game {
                 (y>=chunkYTopLeft*chunkSize) && (y<=chunkYBottomRight*chunkSize);
     }
 
+    public boolean isPixelOnScreen(int x1, int y1, int x2, int y2, int x, int y) {
+        return (x>=x1*chunkSize) && (x<=x2*chunkSize) &&
+                (y>=y1*chunkSize) && (y<=y2*chunkSize);
+    }
+
     public static boolean isOnScreen(int x, int y, int bufferZoneSize) {
         return (x>=chunkXTopLeft-bufferZoneSize) && (x<=chunkXBottomRight+bufferZoneSize) &&
                 (y>=chunkYTopLeft-bufferZoneSize) && (y<=chunkYBottomRight+bufferZoneSize);
+    }
+
+    public static boolean isOnScreen(int x1, int y1, int x2, int y2,
+                                     int x, int y, int bufferZoneSize) {
+        return (x>=x1-bufferZoneSize) && (x<=x2+bufferZoneSize) &&
+                (y>=y1-bufferZoneSize) && (y<=y2+bufferZoneSize);
     }
 
     public static boolean isPixelOnScreen(int x, int y, int bufferZoneSize) {
@@ -533,12 +565,76 @@ public class Main extends Game {
         }
     }
 
+    ArrayList<GameObject> findOnScreenObjects(int x1, int y1, int x2, int y2) {
+        ArrayList<GameObject> queue = new ArrayList<>();
+        // HERE: Add chunks that are inside screen to visibleChunkObjects list
+        for(int xx = x1; xx < x2; xx++) {
+            for(int yy = y1; yy < y2; yy++) {
+                queue.addAll(getChunkArray(xx, yy));
+            }
+        }
+
+        // HERE: Add additional ones that are partly on screen
+        Mask.Rectangle visibleAreaMask = new Mask.Rectangle(
+                e.getRenderer().getCamX(),
+                e.getRenderer().getCamY(),
+                e.getRenderer().getCamX()+e.width,
+                e.getRenderer().getCamY()+e.height);
+        for(int xx = x1-2; xx < x2; xx++) {
+            for(int yy = y1-2; yy < y2; yy++) {
+                if(xx > x1 && yy > y1) {
+                    continue;
+                }
+
+                getChunkArray(xx, yy).forEach(obj -> {
+                    if(obj.mask.isColliding(visibleAreaMask)) {
+                        queue.add(obj);
+                    }
+                });
+            }
+        }
+
+        // HERE: Also add entities
+        Iterator<GameObject> iterator = entities.iterator();
+        while(iterator.hasNext()) {
+            GameObject obj = iterator.next();
+            Point chunkLoc = getChunkLocation((int)obj.x, (int)obj.y);
+            if(isOnScreen(x1, y1, x2, y2, chunkLoc.x, chunkLoc.y, 2)) {
+                queue.add(obj);
+            }
+        }
+
+        // HERE: Add coins
+        Iterator<GameObject> iterator1 = coins.iterator();
+        while(iterator1.hasNext()) {
+            GameObject obj = iterator1.next();
+            Point chunkLoc = getChunkLocation((int)obj.x, (int)obj.y);
+            if(isOnScreen(x1, y1, x2, y2, chunkLoc.x, chunkLoc.y, 1)) {
+                queue.add(obj);
+            }
+        }
+
+
+        structuralBlocks.forEach(o -> {
+            if(o.mask.isColliding(visibleAreaMask)) {
+                queue.add(o);
+            }
+        });
+        flies.forEach(f -> {
+            if(isPixelOnScreen(x1, y1, x2, y2, (int)f.x, (int)f.y)) {
+                queue.add(f);
+            }
+        });
+        return queue;
+    }
+
     public static Point getChunkLocation(int x, int y) {
         return new Point(x/chunkSize, y/chunkSize);
     }
 
     @Override
     public void update(Core core) {
+        Input i = core.getInput();
         boolean startMenuModePrev = startMenuMode;
 
         if(startMenuMode) {
@@ -547,14 +643,14 @@ public class Main extends Game {
             int x = core.getInput().getMouseX();
             int y = core.getInput().getMouseY();
             int alphaSpeed = 32;
-            for(int i = 0; i < numButtons; i++) {
+            for(int k = 0; k < numButtons; k++) {
                 int xx = 16;
-                int yy = 64+32*i;
-                if(AdvancedMath.inRange(x, y, xx, yy, 96, 24)) {
+                int yy = 64+32*k;
+                if(AdvancedMath.inRange(x, y, xx, yy, 192, 24)) {
                     found = true;
-                    for(int t0 = 0; t0 < 4; t0++) {
-                        int x1 = random.nextInt(96);
-                        int x2 = random.nextInt(96);
+                    for(int t0 = 0; t0 < 8; t0++) {
+                        int x1 = random.nextInt(192);
+                        int x2 = random.nextInt(192);
 
                         {
                             // HERE: Top side
@@ -604,8 +700,26 @@ public class Main extends Game {
                         );
                         UniParticle.FadingProcess fadingProcess =
                                 new UniParticle.FadingProcess(255, alphaSpeed, true);
-                        startMenuButtonParticles.add(new UniParticle(xx+96, yy+y2, random.nextBoolean() ? 2 : 4, false,
+                        startMenuButtonParticles.add(new UniParticle(xx+192, yy+y2, random.nextBoolean() ? 2 : 4, false,
                                 color, fadingProcess));
+                    }
+
+                    if(i.isButtonDown(1)) {
+                        if(k == 0) {
+                            // HERE: Start the game
+                            if(!isServer) {
+                                try {
+                                    clientId = -1;
+                                    objects.clear();
+                                    if (socket != null) {
+                                        socket.close();
+                                    }
+                                    socket = new Socket(ip, port);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
                     }
                 }
                 cursor.visible = !found;
@@ -625,7 +739,6 @@ public class Main extends Game {
         addEntities.clear();
 
         findOnScreenBlocked = true;
-        Input i = core.getInput();
 
         int prevCamX = core.getRenderer().getCamX();
         int prevCamY = core.getRenderer().getCamY();
@@ -821,7 +934,7 @@ public class Main extends Game {
         hoverChunkX=i.getRelativeMouseX()/chunkSize;
         hoverChunkY=i.getRelativeMouseY()/chunkSize;
 
-        if(i.isButtonDown(1) && showDebugInfo) {
+        if(i.isButtonDown(1) && showDebugInfo && (isServer || startMenuMode)) {
             // HERE: Generate selected chunk
             deleteChunk(hoverChunkX, hoverChunkY);
             generateChunk(hoverChunkX, hoverChunkY);
@@ -838,10 +951,12 @@ public class Main extends Game {
         // HERE: Generate new chunks
         if(prevCamX != core.getRenderer().getCamX() || prevCamY != core.getRenderer().getCamY()) {
             findOnScreenObjects();
-            for(int xx = chunkXTopLeft-2; xx < chunkXBottomRight+2; xx++) {
-                for(int yy = chunkYTopLeft-2; yy < chunkYBottomRight+2; yy++) {
-                    if(getChunkArray(xx, yy).size() == 0) {
-                        generateChunk(xx, yy);
+            if(isServer || startMenuMode) {
+                for (int xx = chunkXTopLeft - 2; xx < chunkXBottomRight + 2; xx++) {
+                    for (int yy = chunkYTopLeft - 2; yy < chunkYBottomRight + 2; yy++) {
+                        if (getChunkArray(xx, yy).size() == 0) {
+                            generateChunk(xx, yy);
+                        }
                     }
                 }
             }
@@ -859,9 +974,15 @@ public class Main extends Game {
                 // HERE: Go to start menu mode
                 camera.cX =(int)(Integer.MAX_VALUE/8d*7d);
                 camera.cY =(int)(Integer.MAX_VALUE/8d*7d);
+                chunks.clear();
+                visibleChunkObjects.clear();
+                entities.clear();
             } else {
                 // HERE: Exit start menu mode
                 cursor.visible = true;
+                chunks.clear();
+                visibleChunkObjects.clear();
+                entities.clear();
             }
         }
     }
@@ -1151,40 +1272,197 @@ public class Main extends Game {
 
     public void applyChanges(GameObject obj, byte[] data) {
         if(obj instanceof Player) {
-            obj.x = fetchInt(data,4);
-            obj.y = fetchInt(data,8);
-        } else if(obj instanceof Fly) {
-            obj.x = fetchInt(data,4);
-            obj.y = fetchInt(data,8);
-        } else if(obj instanceof Tree) {
-            obj.x = fetchInt(data,4);
-            obj.y = fetchInt(data,8);
-        } else if(obj instanceof Bush) {
-            obj.x = fetchInt(data,4);
-            obj.y = fetchInt(data,8);
-            ((Mask.Rectangle)obj.mask).w = fetchInt(data, 12);
-            ((Mask.Rectangle)obj.mask).h = fetchInt(data, 16);
-        } else if(obj instanceof Rabbit) {
-            obj.x = fetchInt(data,4);
-            obj.y = fetchInt(data,8);
-            ((Rabbit) obj).direction = fetchInt(data, 12);
-            ((Rabbit) obj).directionTarget = fetchInt(data, 16);
-        } else if(obj instanceof Trash) {
-            if(((Trash) obj).type == Trash.TYPE_MUD ||
-                    ((Trash) obj).type == Trash.TYPE_WATER) {
+            if(fetchInt(data, 0) == ((Player) obj).clientId) {
                 obj.x = fetchInt(data, 4);
                 obj.y = fetchInt(data, 8);
-            } else if(((Trash) obj).type == Trash.TYPE_BRANCHES) {
+            }
+        } else {
+            if(obj.hashCode() != fetchInt(data, 0)) {
+                return;
+            }
+            if(obj instanceof Coin) {
                 obj.x = fetchInt(data, 4);
                 obj.y = fetchInt(data, 8);
-                int i = 0;
-                for(UniParticle particle : ((Trash) obj).particles) {
-                    particle.x = fetchInt(data, 8+i*8);
-                    particle.y = fetchInt(data, 8+i*8+4);
-                    i += 1;
+                ((Coin) obj).rotation = fetchInt(data, 12);
+            } else if (obj instanceof Fly) {
+                obj.x = fetchInt(data, 4);
+                obj.y = fetchInt(data, 8);
+            } else if (obj instanceof Tree) {
+                obj.x = fetchInt(data, 4);
+                obj.y = fetchInt(data, 8);
+            } else if (obj instanceof Bush) {
+                obj.x = fetchInt(data, 4);
+                obj.y = fetchInt(data, 8);
+                ((Mask.Rectangle) obj.mask).x = fetchInt(data, 12);
+                ((Mask.Rectangle) obj.mask).y = fetchInt(data, 16);
+                ((Mask.Rectangle) obj.mask).w = fetchInt(data, 20);
+                ((Mask.Rectangle) obj.mask).h = fetchInt(data, 24);
+            } else if(obj instanceof Plant) {
+                obj.x = fetchInt(data, 4);
+                obj.y = fetchInt(data, 8);
+                ((Mask.Rectangle) obj.mask).x = fetchInt(data, 12);
+                ((Mask.Rectangle) obj.mask).y = fetchInt(data, 16);
+                ((Mask.Rectangle) obj.mask).w = fetchInt(data, 20);
+                ((Mask.Rectangle) obj.mask).h = fetchInt(data, 24);
+            } else if (obj instanceof Rabbit) {
+                obj.x = fetchInt(data, 4);
+                obj.y = fetchInt(data, 8);
+                ((Rabbit) obj).direction = fetchInt(data, 12);
+                ((Rabbit) obj).directionTarget = fetchInt(data, 16);
+            } else if (obj instanceof Trash) {
+                if (((Trash) obj).type == Trash.TYPE_MUD ||
+                        ((Trash) obj).type == Trash.TYPE_WATER) {
+                    obj.x = fetchInt(data, 4);
+                    obj.y = fetchInt(data, 8);
+                } else if (((Trash) obj).type == Trash.TYPE_BRANCHES) {
+                    obj.x = fetchInt(data, 4);
+                    obj.y = fetchInt(data, 8);
+                    int i = 0;
+                    for (UniParticle particle : ((Trash) obj).particles) {
+                        particle.x = fetchInt(data, 8 + i * 8);
+                        particle.y = fetchInt(data, 8 + i * 8 + 4);
+                        i += 1;
+                    }
                 }
             }
         }
+    }
+
+    public GameObject changeOrCreate(GameObject target, byte[] data) {
+        if(target == null) {
+            // Create a new object
+            switch (fetchInt(data, 16)) {
+                case 0:
+                    target = new Arrow(0, 0, 0);
+                    break;
+                case 1:
+                    target = new Bush(0, 0);
+                    break;
+                case 2:
+                    target = new Coin(0, 0, 0);
+                    break;
+                case 3:
+                    target = new EnemyBolt(0, 0);
+                    break;
+                case 4:
+                    target = new Explosion(0, 0,
+                            0, false, 0);
+                    break;
+                case 5:
+                    target = new Fly(0, 0);
+                    break;
+                case 6:
+                    target = new Plant(0, 0,
+                            new Color(
+                                    random.nextInt(255),
+                                    random.nextInt(255),
+                                    random.nextInt(255)));
+                    break;
+                case 7:
+                    target = new Player(0, 0);
+                    break;
+                case 8:
+                    target = new Rabbit(0, 0);
+                    break;
+                case 9:
+                    target = new Rocks(0, 0);
+                    break;
+                case 10:
+                    target = new StructuralBlock(0, 0,
+                            StructuralBlock.TYPE_ROCKS);
+                    break;
+                case 11:
+                    target = new Terrain(0, 0,
+                            fetchInt(data, 24));
+                    break;
+                case 12:
+                    target = new Trash(0, 0,
+                            fetchInt(data, 24));
+                    break;
+                case 13:
+                    target = new Tree(0, 0,
+                            fetchInt(data, 24));
+                    break;
+                default:
+                    return null;
+            }
+        } else if(target instanceof Player) {
+            if(((Player) target).clientId !=
+            fetchInt(data, 20)) {
+                return target;
+            }
+        } else {
+            if(target.hashCode() != fetchInt(data, 20)) {
+                return target;
+            }
+        }
+
+        target.dead = fetchInt(data, 0) == 1;
+        target.depth = fetchInt(data, 4);
+        target.x = fetchInt(data, 8);
+        target.y = fetchInt(data, 12);
+
+        if(data.length == 40) {
+
+        }
+
+        return target;
+    }
+
+    public byte[] objectToBytes(GameObject obj) {
+        ArrayList<Byte> bytes = new ArrayList<>();
+        addAllBytes(bytes, convertToByte(obj.dead ? 1 : 0));
+        addAllBytes(bytes, convertToByte(obj.depth));
+        addAllBytes(bytes, convertToByte((int)obj.x));
+        addAllBytes(bytes, convertToByte((int)obj.y));
+        try {
+            addAllBytes(bytes, convertToByte(obj.getClass().getField("Type").getInt(obj)));
+        } catch (IllegalAccessException | NoSuchFieldException e1) {
+            addAllBytes(bytes, convertToByte(-1));
+        }
+
+        // HERE: Add basic stuff like depth, hashcode etc...
+        if(obj instanceof Player) {
+            addAllBytes(bytes, convertToByte(((Player) obj).clientId));
+        } else {
+            addAllBytes(bytes, convertToByte(obj.hashCode()));
+        }
+
+        // HERE: Add mask parameters for certain object types
+        if(obj instanceof Bush || obj instanceof Plant) {
+            addAllBytes(bytes, convertToByte((int)obj.mask.x));
+            addAllBytes(bytes, convertToByte((int)obj.mask.y));
+            addAllBytes(bytes, convertToByte((int)((Mask.Rectangle)obj.mask).x));
+            addAllBytes(bytes, convertToByte((int)((Mask.Rectangle)obj.mask).y));
+        }
+
+        // HERE: Add additional parameters <24 / 40>
+        if(obj instanceof Tree) {
+            addAllBytes(bytes, convertToByte(((Tree) obj).type));
+        } else if(obj instanceof Terrain) {
+            addAllBytes(bytes, convertToByte(((Terrain) obj).type));
+        } else if(obj instanceof Coin) {
+            addAllBytes(bytes, convertToByte((int)((Coin) obj).rotation));
+        } else if(obj instanceof Rabbit) {
+            addAllBytes(bytes, convertToByte((int)((Rabbit) obj).direction));
+            addAllBytes(bytes, convertToByte((int)((Rabbit) obj).directionTarget));
+        } else if(obj instanceof Trash) {
+            addAllBytes(bytes, convertToByte(((Trash) obj).type));
+            if(((Trash) obj).type == Trash.TYPE_BRANCHES) {
+                for (UniParticle particle : ((Trash) obj).particles) {
+                    addAllBytes(bytes, convertToByte(particle.x));
+                    addAllBytes(bytes, convertToByte(particle.y));
+                }
+            }
+        }
+
+        byte[] finalArray = new byte[bytes.size()];
+        int i = 0;
+        for(Byte byt : bytes) {
+            finalArray[i] = (byte)byt;
+            i++;
+        }
+        return finalArray;
     }
 
     public byte[] convertFromObject(GameObject obj) {
@@ -1194,6 +1472,12 @@ public class Main extends Game {
             System.arraycopy(convertToByte(clientId), 0, bytes, 0, 4);
             System.arraycopy(convertToByte((int)obj.x), 0, bytes, 4, 4);
             System.arraycopy(convertToByte((int)obj.y), 0, bytes, 8, 4);
+        } else if(obj instanceof Coin) {
+            bytes = new byte[16];
+            System.arraycopy(convertToByte(obj.hashCode()), 0, bytes, 0, 4);
+            System.arraycopy(convertToByte((int)obj.x), 0, bytes, 4, 4);
+            System.arraycopy(convertToByte((int)obj.y), 0, bytes, 8, 4);
+            System.arraycopy(convertToByte((int)((Coin) obj).rotation), 0, bytes, 12, 4);
         } else if(obj instanceof Fly) {
             bytes = new byte[12];
             System.arraycopy(convertToByte(obj.hashCode()), 0, bytes, 0, 4);
@@ -1205,12 +1489,23 @@ public class Main extends Game {
             System.arraycopy(convertToByte((int)obj.x), 0, bytes, 4, 4);
             System.arraycopy(convertToByte((int)obj.y), 0, bytes, 8, 4);
         } else if(obj instanceof Bush) {
-            bytes = new byte[20];
+            bytes = new byte[28];
             System.arraycopy(convertToByte(obj.hashCode()), 0, bytes, 0, 4);
             System.arraycopy(convertToByte((int)obj.x), 0, bytes, 4, 4);
             System.arraycopy(convertToByte((int)obj.y), 0, bytes, 8, 4);
             System.arraycopy(convertToByte(((Mask.Rectangle)obj.mask).w), 0, bytes, 12, 4);
             System.arraycopy(convertToByte(((Mask.Rectangle)obj.mask).h), 0, bytes, 16, 4);
+            System.arraycopy(convertToByte(((Mask.Rectangle)obj.mask).w), 0, bytes, 20, 4);
+            System.arraycopy(convertToByte(((Mask.Rectangle)obj.mask).h), 0, bytes, 24, 4);
+        } else if(obj instanceof Plant) {
+            bytes = new byte[28];
+            System.arraycopy(convertToByte(obj.hashCode()), 0, bytes, 0, 4);
+            System.arraycopy(convertToByte((int)obj.x), 0, bytes, 4, 4);
+            System.arraycopy(convertToByte((int)obj.y), 0, bytes, 8, 4);
+            System.arraycopy(convertToByte(((Mask.Rectangle)obj.mask).w), 0, bytes, 12, 4);
+            System.arraycopy(convertToByte(((Mask.Rectangle)obj.mask).h), 0, bytes, 16, 4);
+            System.arraycopy(convertToByte(((Mask.Rectangle)obj.mask).w), 0, bytes, 20, 4);
+            System.arraycopy(convertToByte(((Mask.Rectangle)obj.mask).h), 0, bytes, 24, 4);
         } else if(obj instanceof Rabbit) {
             bytes = new byte[20];
             System.arraycopy(convertToByte(obj.hashCode()), 0, bytes, 0, 4);
@@ -1238,7 +1533,7 @@ public class Main extends Game {
                 }
             }
         }
-        return bytes;
+        return addData(bytes, convertToBytes((obj.dead ? 1 : 0), obj.depth));
     }
 
     public byte[] unsign(byte[] bytes) {
@@ -1265,6 +1560,13 @@ public class Main extends Game {
         return newBytes;
     }
 
+    public byte[] addData(byte[] bytes, byte... args) {
+        byte[] newBytes = new byte[bytes.length+args.length];
+        System.arraycopy(bytes, 0, newBytes, 0, bytes.length);
+        System.arraycopy(args, 0, newBytes, bytes.length, args.length);
+        return newBytes;
+    }
+
     public int fetchInt(byte[] array, int offset) {
         return toInt(array[offset], array[offset+1], array[offset+2], array[offset+3]);
     }
@@ -1272,6 +1574,47 @@ public class Main extends Game {
     public int toInt(byte b1, byte b2, byte b3, byte b4) {
         return  ((0xFF & b1) << 24) | ((0xFF & b2) << 16) |
                 ((0xFF & b3) << 8) | (0xFF & b4);
+    }
+
+    public static void addAllBytes(ArrayList<Byte> target, byte[] bytes) {
+        for(byte byt : bytes) {
+            target.add(byt);
+        }
+    }
+
+    public static byte[] toByteArray(Byte[] array) {
+        byte[] result = new byte[array.length];
+        int i = 0;
+        for(Byte bytee : array) {
+            result[i] = bytee;
+            i++;
+        }
+        return result;
+    }
+
+    public Data getData(int clientId) {
+        if(!data.containsKey(clientId)) {
+            data.put(clientId, new Data());
+        }
+        return data.get(clientId);
+    }
+
+    public static byte[] toByteArray(ArrayList<Byte> array) {
+        byte[] result = new byte[array.size()];
+        int i = 0;
+        for(Byte bytee : array) {
+            result[i] = bytee;
+            i++;
+        }
+        return result;
+    }
+
+    private static class Data {
+        public String playerName;
+    }
+
+    public static abstract class GameMode {
+        public abstract Point getPlayerJoinPosition();
     }
 
 }

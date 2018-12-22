@@ -11,6 +11,7 @@ import java.util.Random;
 public class Coin extends GameObject {
 
     public double speed, rotation, rotationSpeed, xD, yD, angle;
+    public final int Type = 2;
 
     public Coin(int x, int y, double angle) {
         super(2, 9);

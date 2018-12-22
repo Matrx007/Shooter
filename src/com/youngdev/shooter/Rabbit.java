@@ -21,6 +21,7 @@ public class Rabbit extends Healable {
     boolean escaping;
     private Random random;
     private boolean unStucking;
+    public final int Type = 8;
 
     private AABBCollisionManager cm;
 

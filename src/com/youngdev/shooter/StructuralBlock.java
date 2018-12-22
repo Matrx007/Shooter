@@ -13,6 +13,7 @@ import java.util.Random;
 public class StructuralBlock extends GameObject {
     public int type;
     public ArrayList<UniParticle> particles;
+    public final int Type = 10;
 
     public static final int TYPE_ROCKS = 1, TYPE_WOOD = 2, TYPE_FIBER = 3, TYPE_WOOD_FLOORING = 4;
 

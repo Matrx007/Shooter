@@ -21,8 +21,8 @@ public class EnemyBolt extends Healable {
     private boolean isDead;
     private double speedX, speedY, maxSpeed, dir;
     private Random random;
-
     private ArrayList<UniParticle> particles;
+    public final int Type = 3;
 
     public EnemyBolt(int x, int y) {
         super(x, y, 32, 32, 50, 3, 12, true, false);
