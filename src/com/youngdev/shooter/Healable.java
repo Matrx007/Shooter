@@ -4,16 +4,17 @@ import com.engine.libs.game.GameObject;
 import com.engine.libs.game.Mask;
 import com.engine.libs.input.Input;
 import com.engine.libs.rendering.Renderer;
+import com.youngdev.shooter.multiPlayerManagement.WorldObject;
 
 import java.util.Random;
 
-public abstract class Healable extends GameObject {
+public abstract class Healable extends WorldObject {
     public int health;
     public Random random;
     public boolean isEnemy, hasCollision;
 
-    public Healable(int x, int y, int w, int h, int health, int index, int depth, boolean isEnemy, boolean hasCollision) {
-        super(index, depth);
+    public Healable(int type, int x, int y, int w, int h, int health, int index, int depth, boolean isEnemy, boolean hasCollision) {
+        super(index, depth, type);
         this.x = x;
         this.y = y;
         this.isEnemy = isEnemy;

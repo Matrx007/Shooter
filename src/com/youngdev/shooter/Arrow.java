@@ -6,13 +6,14 @@ import com.engine.libs.input.Input;
 import com.engine.libs.math.AdvancedMath;
 import com.engine.libs.math.BasicMath;
 import com.engine.libs.rendering.Renderer;
+import com.youngdev.shooter.multiPlayerManagement.WorldObject;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Random;
 
-public class Arrow extends GameObject {
+public class Arrow extends WorldObject {
     public int dir, wiggleStep;
     private double xD, yD;
     public double addX, addY;
@@ -24,7 +25,7 @@ public class Arrow extends GameObject {
     public static final float SPEED = 6;
 
     public Arrow(int x, int y, int dir) {
-        super(1, 13);
+        super(1, 13, 0);
         this.x = x;
         this.y = y;
         this.xD = x;

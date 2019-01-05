@@ -4,17 +4,18 @@ import com.engine.libs.game.GameObject;
 import com.engine.libs.game.Mask;
 import com.engine.libs.input.Input;
 import com.engine.libs.rendering.Renderer;
+import com.youngdev.shooter.multiPlayerManagement.WorldObject;
 
 import java.awt.*;
 import java.util.Random;
 
-public class Coin extends GameObject {
+public class Coin extends WorldObject {
 
     public double speed, rotation, rotationSpeed, xD, yD, angle;
     public final int Type = 2;
 
     public Coin(int x, int y, double angle) {
-        super(2, 9);
+        super(2, 9, 2);
 
         // HERE: Fix depth
         Random random = new Random();

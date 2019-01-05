@@ -4,6 +4,7 @@ import com.engine.libs.game.GameObject;
 import com.engine.libs.input.Input;
 import com.engine.libs.math.AdvancedMath;
 import com.engine.libs.rendering.Renderer;
+import com.youngdev.shooter.multiPlayerManagement.WorldObject;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -25,7 +26,7 @@ public class EnemyBolt extends Healable {
     public final int Type = 3;
 
     public EnemyBolt(int x, int y) {
-        super(x, y, 32, 32, 50, 3, 12, true, false);
+        super(3, x, y, 32, 32, 50, 3, 12, true, false);
         random = new Random();
         this.dir = random.nextDouble()*360;
         maxSpeed = 3f;

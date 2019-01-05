@@ -4,29 +4,32 @@ import com.engine.libs.game.GameObject;
 import com.engine.libs.game.Mask;
 import com.engine.libs.input.Input;
 import com.engine.libs.rendering.Renderer;
-import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
+import com.youngdev.shooter.multiPlayerManagement.WorldObject;
 
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
 
-public class Plant extends GameObject {
+public class Plant extends WorldObject {
     ArrayList<Piece> leaf;
     private boolean prevCollision;
     private Random random;
     private int type;
     public final int Type = 6;
+    public boolean collision;
 
-    private static final int TYPE_SINLGE=0, TYPE_PATCH=1;
+    private static final int TYPE_SINGLE =0, TYPE_PATCH=1;
     
     public Plant(int x, int y, Color color) {
-        super(6, 2);
+        super(6, 2, 6);
         this.x = x;
         this.y = y;
         this.prevCollision = false;
         
         leaf = new ArrayList<>();
+
+        collision = false;
 
         // HERE: Fix depth
         this.random = new Random();
@@ -34,19 +37,19 @@ public class Plant extends GameObject {
 
         int smallestX=Integer.MAX_VALUE, smallestY=Integer.MAX_VALUE, largestX=Integer.MIN_VALUE, largestY=Integer.MIN_VALUE;
 
-        type = random.nextInt(10)==1 ? TYPE_PATCH : TYPE_SINLGE;
+        type = random.nextInt(10)==1 ? TYPE_PATCH : TYPE_SINGLE;
 
-        if(type == TYPE_SINLGE) {
+        if(type == TYPE_SINGLE) {
             Player.Vector4 bounds = spawn(0, 0, 10, 4, 8, color);
             smallestX = bounds.x1;
             smallestY = bounds.y1;
             largestX = bounds.x2;
             largestY = bounds.y2;
-            System.out.println("Plant");
-            System.out.println("smallestX = " + smallestX);
-            System.out.println("smallestY = " + smallestY);
-            System.out.println("largestX = " + largestX);
-            System.out.println("largestY = " + largestY);
+//            System.out.println("Plant");
+//            System.out.println("smallestX = " + smallestX);
+//            System.out.println("smallestY = " + smallestY);
+//            System.out.println("largestX = " + largestX);
+//            System.out.println("largestY = " + largestY);
         } else if(type == TYPE_PATCH) {
             int numSubPatches = random.nextInt(4)+4;
             for(int i = 0; i < numSubPatches; i++) {
@@ -60,11 +63,11 @@ public class Plant extends GameObject {
                 largestX = Math.max(largestX, bounds.x2);
                 largestY = Math.max(largestY, bounds.y2);
             }
-            System.out.println("Patch");
-            System.out.println("smallestX = " + smallestX);
-            System.out.println("smallestY = " + smallestY);
-            System.out.println("largestX = " + largestX);
-            System.out.println("largestY = " + largestY);
+//            System.out.println("Patch");
+//            System.out.println("smallestX = " + smallestX);
+//            System.out.println("smallestY = " + smallestY);
+//            System.out.println("largestX = " + largestX);
+//            System.out.println("largestY = " + largestY);
         }
 
         mask = new Mask.Rectangle(smallestX, smallestY, largestX-smallestX, largestY-smallestY);
@@ -72,7 +75,7 @@ public class Plant extends GameObject {
 
     @Override
     public void update(Input input) {
-        boolean collision = false;
+        collision = false;
         ArrayList<GameObject> entities = new ArrayList<>();
 
         Iterator<GameObject> it;

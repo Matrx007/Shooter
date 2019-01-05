@@ -4,9 +4,11 @@ import com.engine.Game;
 import com.engine.libs.game.GameObject;
 import com.engine.libs.game.Mask;
 import com.engine.libs.game.behaviors.AABBCollisionManager;
+import com.engine.libs.game.behaviors.AABBComponent;
 import com.engine.libs.input.Input;
 import com.engine.libs.math.AdvancedMath;
 import com.engine.libs.rendering.Renderer;
+import com.engine.libs.world.CollisionMap;
 
 import java.awt.*;
 
@@ -17,22 +19,23 @@ public class Player extends Healable {
 
     public ArrayList<UniParticle> particles;
     private Random random;
-    private AABBCollisionManager cm;
+    public AABBCollisionManager cm;
     boolean blinkingON;
     private boolean found;
     private boolean waitingForRelease;
+    public String name = "Jane Doe";
     public boolean buildingMode, inventoryOpen, leftHandShooting, rightHandShooting, clipOverlayOpen;
     public int xx, yy, invSize = 24, midX, midY, selectedItem, time=60, timer, leftHandReload, rightHandReload,
             reloadTime = 50, bulletTimingCap = 5, leftHandBulletTimingCapCounter, leftHandBulletAmountCounter,
             rightHandBulletTimingCapCounter, rightHandBulletAmountCounter, bulletsPerShot = 5, ammo = 34, maxAmmo = 45,
-            clip = 10, money, clientId = -1;
+            clip = 10, money, clientId = -1, moveX, moveY;
     public double lastCoinX, lastCoinY, coinOverlayAlpha, coinOverlayX, coinOverlayY, clipOverlayAlpha,
             clipOverlayRotation, clipOverlayRotationSpeed, clipOverlayRotationTarget, health, healthMax,
             hunger, hungerMax, statsOverlayAlpha, statsOverlayRotation, statsOverlayRotationSpeed,
             statsOverlayRotationTarget, autoReloadBlinkingTime, autoReloadBlinkingTimer, autoReloadTime,
             autoReloadTimer, autoReloadMaximumAmmo, autoReloadY, autoReloadTargetY, slowMotionSpeedMultiplierTarget,
             raysAccuracy = 1;
-    private int blinkingTime = 30;
+    private int blinkingTime = 30, lastMoveX, lastMoveY;
     public int[] items;
     private String[] itemNames;
     private StructuralBlock[] itemSamples;
@@ -43,12 +46,14 @@ public class Player extends Healable {
     private ArrayList<Vector8> rays;
     public ShadowRenderer shadowRenderer;
     public final int Type = 7;
+    public CollisionMap collisionMap;
 
     public Player(int x, int y) {
-        super(x, y, 4, 4, 200, 0, 10, false, false);
+        super(7, x, y, 4, 4, 200, 0, 10, false, false);
         this.depth = 10;
         this.random = new Random();
         particles = new ArrayList<>();
+        name = "Jane Doe";
 
         // HERE: Fix depth
         depth = random.nextInt(1023)+depth*1024;
@@ -113,16 +118,19 @@ public class Player extends Healable {
 
         slowMotionSpeedMultiplierTarget = 1d;
 
+        lastMoveX = lastMoveY = 0;
+
         rays = new ArrayList<>();
-
         shadowRenderer = new ShadowRenderer();
-
+        collisionMap = Main.collisionMap;
         mask = new Mask.Rectangle(x-4, y-4, 8, 8);
-        cm = new AABBCollisionManager(this, Main.collisionMap);
+        aabbComponent = new AABBComponent(this.mask);
+        cm = new AABBCollisionManager(this, collisionMap);
     }
 
     @Override
     public void update(Input i) {
+//        System.out.println("cMap.size = "+collisionMap.size());
         boolean prevInvOpen = inventoryOpen;
         blinkingTimer += 1d/Main.toSlowMotion(1d);
 
@@ -132,11 +140,17 @@ public class Player extends Healable {
         }
 
         // HERE: Use keyboard to move
-        int moveX = (i.isKey(KeyEvent.VK_D) ? 1 : 0) - (i.isKey(KeyEvent.VK_A) ? 1 : 0);
-        int moveY = (i.isKey(KeyEvent.VK_S) ? 1 : 0) - (i.isKey(KeyEvent.VK_W) ? 1 : 0);
+        if(Main.clientId == clientId) {
+            moveX = (i.isKey(KeyEvent.VK_D) ? 1 : 0) - (i.isKey(KeyEvent.VK_A) ? 1 : 0);
+            moveY = (i.isKey(KeyEvent.VK_S) ? 1 : 0) - (i.isKey(KeyEvent.VK_W) ? 1 : 0);
+        }
+//        moveX *= clientId == Main.clientId ? 1 : 0;
+//        moveY *= clientId == Main.clientId ? 1 : 0;
 
         if((moveX != 0 || moveY != 0)) {
             timer = time;
+            lastMoveX = moveX;
+            lastMoveY = moveY;
         }
 
         targetSpeedX = moveX * maxSpeed;
@@ -148,8 +162,28 @@ public class Player extends Healable {
         speedX = Math.max(-maxSpeed, Math.min(maxSpeed, speedX));
         speedY = Math.max(-maxSpeed, Math.min(maxSpeed, speedY));
 
-//        System.out.println(Main.collisionMap.size());
-        cm.move(Main.toSlowMotion(speedX), Main.toSlowMotion(speedY));
+        x += speedX;
+        y += speedY;
+        mask.move(speedX, speedY);
+
+        // -- HOR / X --
+        if(collisionMap.collisionWithExcept(mask, aabbComponent)) {
+            while(!collisionMap.collisionWithExcept(mask.shift(lastMoveX, 0),
+                    aabbComponent)) {
+                x += lastMoveX;
+                mask.move(lastMoveX, 0);
+            }
+        }
+
+        // -- VER / Y --
+        if(collisionMap.collisionWithExcept(mask, aabbComponent)) {
+            while(!collisionMap.collisionWithExcept(mask.shift(0, lastMoveY),
+                    aabbComponent)) {
+                y += lastMoveY;
+                mask.move(0, lastMoveY);
+            }
+        }
+
 
         this.xx = (int) x;
         this.yy = (int) y;
@@ -298,6 +332,12 @@ public class Player extends Healable {
             autoReloadBlinkingTimer = 0;
             autoReloadTimer = 0;
         }
+
+        this.mask.x = x;
+        this.mask.y = y;
+
+        this.aabbComponent.area.x = x;
+        this.aabbComponent.area.y = y;
 
         /*
         // ---- Shadow caster V 0.1 ----
@@ -473,10 +513,10 @@ public class Player extends Healable {
 
     static Point getIntersectionPoint(Point A, Point B, Point P) {
         Point abDir = B.minus(A);
-        Point perpareDir = new Point(-abDir.x, abDir.y);
+        Point prepareDir = new Point(-abDir.x, abDir.y);
         Point apDir = P.minus(A);
-        double s = (perpareDir.y * apDir.x - perpareDir.x * apDir.y)
-                / (abDir.x * perpareDir.y - abDir.y * perpareDir.x);
+        double s = (prepareDir.y * apDir.x - prepareDir.x * apDir.y)
+                / (abDir.x * prepareDir.y - abDir.y * prepareDir.x);
         return A.plus(abDir.scale(s));
     }
 

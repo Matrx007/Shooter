@@ -5,28 +5,32 @@ import com.engine.libs.game.Mask;
 import com.engine.libs.game.behaviors.AABBComponent;
 import com.engine.libs.input.Input;
 import com.engine.libs.rendering.Renderer;
+import com.youngdev.shooter.multiPlayerManagement.WorldObject;
 
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
 
-public class Tree extends GameObject {
+public class Tree extends WorldObject {
 
     private ArrayList<Leaf> leaf;
     private ArrayList<Point[]> brunches;
     private Random random;
     private boolean prevCollision, fliesInside;
+    public boolean collision;
     public int type;
     public static final int TYPE_SAVANNA = 0, TYPE_OAK = 1;
     public final int Type = 13;
 
     public Tree(int x, int y, int type) {
-        super(11, 20);
+        super(11, 20, 13);
         this.depth = 20;
         this.x = x;
         this.y = y;
         this.fliesInside = true;
+
+        collision = false;
 
         // HERE: Fix depth
         this.random = new Random();
@@ -92,7 +96,7 @@ public class Tree extends GameObject {
 
     @Override
     public void update(Input input) {
-        boolean collision = false;
+        collision = false;
 
         Iterator<GameObject> it;
         for(it = Main.main.visibleChunkObjects.iterator(); it.hasNext();) {
@@ -110,7 +114,7 @@ public class Tree extends GameObject {
         boolean spawn = random.nextInt(16) == 3;
 
         leaf.forEach(leave -> {
-            if(collision_EffectivelyFinal) {/* && !this.prevCollision) {*/
+            if(collision_EffectivelyFinal && !prevCollision) {/* && !this.prevCollision) {*/
                 leave.speed = 24d;
                 if(fliesInside) {
                     if (spawn) {
@@ -161,7 +165,8 @@ public class Tree extends GameObject {
 //            double distance = generateNonLinearNumber1(random.nextFloat()*10d-5d)*distanceLimit;
 //            double distance = Math.abs(random.nextGaussian()/2.3d)*distanceLimit*2;
 //            double distance = random.nextDouble()*distanceLimit;
-            double distance = (1-Math.sqrt(random.nextDouble()))*distanceLimit;
+            double distance = calcGaussian(random.nextDouble())*distanceLimit;
+//            double distance = (1-Math.sqrt(random.nextDouble()))*distanceLimit;
             double angle = random.nextDouble()*360;
             int xx = (int)(offX+x+Math.cos(Math.toRadians(angle))*distance);
             int yy = (int)(offY+y+Math.sin(Math.toRadians(angle))*distance);
@@ -203,6 +208,10 @@ public class Tree extends GameObject {
                     baseColor.getGreen()+tone,
                     baseColor.getBlue()+tone);
         }
+    }
+
+    public double calcGaussian(double x) {
+        return Math.pow(Math.sin(x+ Math.PI/2), 10);
     }
 
     public double generateNonLinearNumber1(double x) {

@@ -12,13 +12,13 @@ import java.util.Random;
 public class Rabbit extends Healable {
 
     double speedTick;
-    double direction;
-    double directionTarget;
+    public double direction;
+    public double directionTarget;
     double speed;
     double speedTarget;
     double maxSpeed;
     double movingTime;
-    boolean escaping;
+    public boolean escaping;
     private Random random;
     private boolean unStucking;
     public final int Type = 8;
@@ -28,7 +28,7 @@ public class Rabbit extends Healable {
     public static final boolean collideWithOthers = false;
 
     public Rabbit(int x, int y) {
-        super(x, y, 16, 16, 50, 13, 5, false, collideWithOthers);
+        super(8, x, y, 16, 16, 50, 13, 5, false, collideWithOthers);
         random = new Random();
 
         cm = new AABBCollisionManager(this, Main.collisionMap);

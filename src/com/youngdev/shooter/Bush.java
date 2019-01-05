@@ -5,21 +5,24 @@ import com.engine.libs.game.Mask;
 import com.engine.libs.game.behaviors.AABBComponent;
 import com.engine.libs.input.Input;
 import com.engine.libs.rendering.Renderer;
+import com.youngdev.shooter.multiPlayerManagement.WorldObject;
 
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
 
-public class Bush extends GameObject {
+public class Bush extends WorldObject {
 
     private ArrayList<Leaf> leaf;
     private Random random;
-    private boolean prevCollision, fliesInside;
+    private boolean prevCollision;
+    public boolean fliesInside;
     public final int Type = 1;
+    public boolean collision;
 
     public Bush(int x, int y) {
-        super(11, 11);
+        super(11, 11, 1);
         this.x = x;
         this.y = y;
         this.fliesInside = true;
@@ -31,6 +34,7 @@ public class Bush extends GameObject {
 
         leaf = new ArrayList<>();
 
+        collision = false;
 
         // HERE: Bush gen V 1.0
         Rectangle bounds = spawnLeaf(24, 36, 24,
@@ -57,7 +61,7 @@ public class Bush extends GameObject {
 
     @Override
     public void update(Input input) {
-        boolean collision = false;
+        collision = false;
 
         Iterator<GameObject> it;
         for(it = Main.main.visibleChunkObjects.iterator(); it.hasNext();) {

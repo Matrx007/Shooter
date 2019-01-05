@@ -1,16 +1,16 @@
 package com.youngdev.shooter;
 
-import com.engine.libs.game.GameObject;
 import com.engine.libs.game.Mask;
 import com.engine.libs.input.Input;
 import com.engine.libs.rendering.Renderer;
+import com.youngdev.shooter.multiPlayerManagement.WorldObject;
 
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Random;
 
-public class Terrain extends GameObject {
-    private ArrayList<Patch> patches;
+public class Terrain extends WorldObject {
+    private ArrayList<Patch> pieces;
 
     public static final int TYPE_SMALL_ROCKS = 1,
                             TYPE_DIRT_PATCH = 2;
@@ -18,7 +18,7 @@ public class Terrain extends GameObject {
     public int type;
 
     public Terrain(int x, int y, int type) {
-        super(9, 0);
+        super(9, 0, 11);
         this.x = x;
         this.y = y;
         this.type = type;
@@ -27,7 +27,7 @@ public class Terrain extends GameObject {
         Random random = new Random();
         this.depth = random.nextInt(1023)+depth*1024;
 
-        patches = new ArrayList<>();
+        pieces = new ArrayList<>();
         int range = 48;
         int smallestX=Integer.MAX_VALUE, smallestY=Integer.MAX_VALUE, largestX=Integer.MIN_VALUE, largestY=Integer.MIN_VALUE;
         switch (type) {
@@ -47,7 +47,7 @@ public class Terrain extends GameObject {
                     Color color = new Color(baseColor.getRed()+tone,
                             baseColor.getGreen()+tone,
                             baseColor.getBlue()+tone);
-                    patches.add(new Patch(xx, yy, size, color));
+                    pieces.add(new Patch(xx, yy, size, color));
                     smallestX = Math.min(smallestX, xx-size/2);
                     smallestY = Math.min(smallestY, yy-size/2);
                     largestX = Math.max(largestX, (int)Math.ceil(xx+size/2d));
@@ -66,8 +66,8 @@ public class Terrain extends GameObject {
                     Color color = new Color(baseColor.getRed()+tone,
                             baseColor.getGreen()+tone,
                             baseColor.getBlue()+tone);
-                    patches.add(new Patch(xx, yy, size, color));
-                    patches.add(new Patch(xx, yy, size, color));
+                    pieces.add(new Patch(xx, yy, size, color));
+                    pieces.add(new Patch(xx, yy, size, color));
                     smallestX = Math.min(smallestX, xx-size/2);
                     smallestY = Math.min(smallestY, yy-size/2);
                     largestX = Math.max(largestX, (int)Math.ceil(xx+size/2d));
@@ -86,7 +86,7 @@ public class Terrain extends GameObject {
 
     @Override
     public void render(Renderer r) {
-        patches.forEach(obj -> obj.render(r));
+        pieces.forEach(obj -> obj.render(r));
     }
 
     @Override

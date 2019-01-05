@@ -4,19 +4,20 @@ import com.engine.libs.game.GameObject;
 import com.engine.libs.input.Input;
 import com.engine.libs.math.AdvancedMath;
 import com.engine.libs.rendering.Renderer;
+import com.youngdev.shooter.multiPlayerManagement.WorldObject;
 
 import java.awt.*;
 import java.util.Iterator;
 import java.util.Random;
 
-public class Fly extends GameObject {
-    private boolean state; // TRUE - Idle, FALSE - Fly away
+public class Fly extends WorldObject {
+    public boolean state; // TRUE - Idle, FALSE - Fly away
     private double targetX, targetY, angle, speed;
     private Random random;
     public final int Type = 5;
 
     public Fly(int x, int y) {
-        super(3, 15);
+        super(3, 15, 5);
         this.x = x;
         this.y = y;
         this.speed = 0;
@@ -31,7 +32,7 @@ public class Fly extends GameObject {
     }
 
     public Fly(int x, int y, boolean state) {
-        super(5, 35);
+        super(5, 35, 5);
         this.x = x;
         this.y = y;
         this.speed = 0;
@@ -54,8 +55,9 @@ public class Fly extends GameObject {
                     }
                 }
             }
-            angle = angle(closestEnemy.x, closestEnemy.y,
-                    x, y) - 180;
+            if(closestEnemy != null)
+                angle = angle(closestEnemy.x, closestEnemy.y,
+                        x, y) - 180;
         }
     }
 
