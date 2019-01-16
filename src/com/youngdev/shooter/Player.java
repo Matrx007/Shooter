@@ -126,6 +126,7 @@ public class Player extends Healable {
         mask = new Mask.Rectangle(x-4, y-4, 8, 8);
         aabbComponent = new AABBComponent(this.mask);
         cm = new AABBCollisionManager(this, collisionMap);
+        needsUpdate = true;
     }
 
     @Override
@@ -151,6 +152,7 @@ public class Player extends Healable {
             timer = time;
             lastMoveX = moveX;
             lastMoveY = moveY;
+            needsUpdate = true;
         }
 
         targetSpeedX = moveX * maxSpeed;
@@ -166,23 +168,23 @@ public class Player extends Healable {
         y += speedY;
         mask.move(speedX, speedY);
 
-        // -- HOR / X --
-        if(collisionMap.collisionWithExcept(mask, aabbComponent)) {
-            while(!collisionMap.collisionWithExcept(mask.shift(lastMoveX, 0),
-                    aabbComponent)) {
-                x += lastMoveX;
-                mask.move(lastMoveX, 0);
-            }
-        }
-
-        // -- VER / Y --
-        if(collisionMap.collisionWithExcept(mask, aabbComponent)) {
-            while(!collisionMap.collisionWithExcept(mask.shift(0, lastMoveY),
-                    aabbComponent)) {
-                y += lastMoveY;
-                mask.move(0, lastMoveY);
-            }
-        }
+//         -- HOR / X --
+//        if(collisionMap.collisionWithExcept(mask, aabbComponent)) {
+//            while(!collisionMap.collisionWithExcept(mask.shift(-lastMoveX, 0),
+//                    aabbComponent)) {
+//                x -= lastMoveX;
+//                mask.move(lastMoveX, 0);
+//            }
+//        }
+//
+//         -- VER / Y --
+//        if(collisionMap.collisionWithExcept(mask, aabbComponent)) {
+//            while(!collisionMap.collisionWithExcept(mask.shift(0, -lastMoveY),
+//                    aabbComponent)) {
+//                y -= lastMoveY;
+//                mask.move(0, lastMoveY);
+//            }
+//        }
 
 
         this.xx = (int) x;

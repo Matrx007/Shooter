@@ -75,6 +75,7 @@ public class Plant extends WorldObject {
 
     @Override
     public void update(Input input) {
+        prevCollision = collision;
         collision = false;
         ArrayList<GameObject> entities = new ArrayList<>();
 
@@ -88,6 +89,8 @@ public class Plant extends WorldObject {
                         collision = true;
                    }
         }
+
+        if(collision != prevCollision) needsUpdate = true;
 
         boolean collision_EffectivelyFinal = collision;
 
@@ -108,8 +111,6 @@ public class Plant extends WorldObject {
             leave.addX = (int)(Math.cos(Math.toRadians(leave.step))*2d);
             leave.addY = (int)(Math.sin(Math.toRadians(leave.step))*2d);
         });
-
-        prevCollision = collision;
     }
 
     @Override
@@ -154,6 +155,7 @@ public class Plant extends WorldObject {
             int yy = (int)(offY+y+Math.sin(Math.toRadians(angle))*distance);
             int size = random.nextInt(2) + 4;
             int tone = random.nextInt(10);
+
             Color clr = new Color(color.getRed() + tone, color.getGreen() + tone, color.getBlue() + tone);
             leaf.add(new Piece(xx, yy, size, clr, random.nextInt(359)));
 

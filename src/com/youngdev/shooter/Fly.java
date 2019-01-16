@@ -63,6 +63,7 @@ public class Fly extends WorldObject {
 
     @Override
     public void update(Input input) {
+        needsUpdate = true;
         if(dead) return;
         if(state) {
             double minDis = Double.MAX_VALUE;

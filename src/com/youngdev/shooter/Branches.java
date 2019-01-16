@@ -127,6 +127,10 @@ public class Branches extends WorldObject {
                 xx += Main.toSlowMotion(speedX);
                 yy += Main.toSlowMotion(speedY);
 
+                if(speedX != 0 || speedY != 0) {
+                    needsUpdate = true;
+                }
+
                 owner.x = (int)xx;
                 owner.y = (int)yy;
 

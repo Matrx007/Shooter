@@ -61,6 +61,7 @@ public class Bush extends WorldObject {
 
     @Override
     public void update(Input input) {
+        this.prevCollision = collision;
         collision = false;
 
         Iterator<GameObject> it;
@@ -74,6 +75,8 @@ public class Bush extends WorldObject {
                         break;
                     }
         }
+
+        if(collision != prevCollision) needsUpdate = true;
 
         boolean collision_EffectivelyFinal = collision;
         boolean spawn = random.nextInt(16) == 3;
@@ -97,8 +100,6 @@ public class Bush extends WorldObject {
             leave.addX = (int)(Math.cos(Math.toRadians(leave.step))*2d);
             leave.addY = (int)(Math.sin(Math.toRadians(leave.step))*2d);
         });
-
-        this.prevCollision = collision_EffectivelyFinal;
     }
 
     @Override

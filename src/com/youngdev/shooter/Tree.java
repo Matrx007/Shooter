@@ -46,8 +46,9 @@ public class Tree extends WorldObject {
         Rectangle bounds = null;
         switch (type) {
             case TYPE_OAK:
-                bounds = spawnLeaf(36, 48, 96, 16, 64, 0, 0,
-                        new Color(29, 87, 18));
+                bounds = spawnLeaf(36, 48, 72,
+                        16, 32, 0, 0,
+                        new Color(29, 87, 18), 4);
                 break;
             case TYPE_SAVANNA:
                 int leafGroups = random.nextInt(5)+5;
@@ -72,7 +73,7 @@ public class Tree extends WorldObject {
                             44+colorTone);
 
                     Rectangle tempBounds = spawnLeaf(36, 48, 55,
-                            10, 16, xx, yy, baseColor);
+                            10, 16, xx, yy, baseColor, 8);
 
                     smallestX = Math.min(smallestX, tempBounds.x);
                     smallestY = Math.min(smallestY, tempBounds.y);
@@ -157,7 +158,8 @@ public class Tree extends WorldObject {
     }
 
     private Rectangle spawnLeaf(int minLeaf, int maxLeaf, int distanceLimit,
-                                int minSize, int maxSize, int offX, int offY, Color baseColor) {
+                                int minSize, int maxSize, int offX, int offY,
+                                Color baseColor, int pow) {
         int numLeaf = random.nextInt(maxLeaf-minLeaf) + minLeaf;
         int smallestX=Integer.MAX_VALUE, smallestY=Integer.MAX_VALUE, largestX=Integer.MIN_VALUE, largestY=Integer.MIN_VALUE;
         for (int i = 0; i < numLeaf; i++) {
@@ -165,14 +167,16 @@ public class Tree extends WorldObject {
 //            double distance = generateNonLinearNumber1(random.nextFloat()*10d-5d)*distanceLimit;
 //            double distance = Math.abs(random.nextGaussian()/2.3d)*distanceLimit*2;
 //            double distance = random.nextDouble()*distanceLimit;
-            double distance = calcGaussian(random.nextDouble())*distanceLimit;
+            double gaussian = calcGaussian(random.nextDouble(), pow);
+            double distance = gaussian*distanceLimit;
 //            double distance = (1-Math.sqrt(random.nextDouble()))*distanceLimit;
             double angle = random.nextDouble()*360;
             int xx = (int)(offX+x+Math.cos(Math.toRadians(angle))*distance);
             int yy = (int)(offY+y+Math.sin(Math.toRadians(angle))*distance);
 //            int xx = (int)x - random.nextInt(distanceLimit*2) + distanceLimit + offX;
 //            int yy = (int)y - random.nextInt(distanceLimit*2) + distanceLimit + offY;
-            int size = minSize+random.nextInt(maxSize-minSize);
+            int size = (int)(minSize+(1-gaussian)*(maxSize-minSize));
+//            int size = minSize+random.nextInt(maxSize-minSize);
             Leaf leave = new Leaf(xx, yy, size, random.nextInt(15), random.nextInt(359));
             leave.baseColor = baseColor;
             leaf.add(leave);
@@ -212,6 +216,10 @@ public class Tree extends WorldObject {
 
     public double calcGaussian(double x) {
         return Math.pow(Math.sin(x+ Math.PI/2), 10);
+    }
+
+    public double calcGaussian(double x, int pow) {
+        return Math.pow(Math.sin(x+ Math.PI/2), pow);
     }
 
     public double generateNonLinearNumber1(double x) {

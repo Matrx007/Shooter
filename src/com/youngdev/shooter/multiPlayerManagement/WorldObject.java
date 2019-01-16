@@ -14,6 +14,7 @@ import java.util.Random;
 public abstract class WorldObject extends GameObject {
     private Random random;
     private int type;
+    public boolean needsUpdate = false;
     public int virtualHashcode = 0;
     private static final Map<Integer, WorldObjectData> typeData =
             new HashMap<>();
