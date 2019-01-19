@@ -16,7 +16,9 @@ public class Cursor {
     public Cursor() {
         particles = new ArrayList<>();
         random = new Random();
-        cursorColor = new Color(164, 170, 46);
+        cursorColor = new Color(221, 211, 235);
+        // 132, 5, 0
+        // 164, 170, 46
         visible = true;
     }
 

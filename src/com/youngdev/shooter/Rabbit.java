@@ -47,7 +47,6 @@ public class Rabbit extends Healable {
 
     @Override
     public void update(Input i) {
-        needsUpdate = true;
         if (escaping) {
             directionTarget = Fly.angle(x, y, Main.main.player.x, Main.main.player.y) - 180;
             speedTarget = maxSpeed;

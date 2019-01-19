@@ -4,12 +4,13 @@ import com.engine.libs.game.GameObject;
 import com.engine.libs.game.Mask;
 import com.engine.libs.input.Input;
 import com.engine.libs.rendering.Renderer;
-import com.youngdev.shooter.multiPlayerManagement.WorldObject;
 
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
+
+import static com.youngdev.shooter.Main.main;
 
 public class Plant extends WorldObject {
     ArrayList<Piece> leaf;
@@ -37,7 +38,7 @@ public class Plant extends WorldObject {
 
         int smallestX=Integer.MAX_VALUE, smallestY=Integer.MAX_VALUE, largestX=Integer.MIN_VALUE, largestY=Integer.MIN_VALUE;
 
-        type = random.nextInt(10)==1 ? TYPE_PATCH : TYPE_SINGLE;
+        type = random.nextInt(20)==1 ? TYPE_PATCH : TYPE_SINGLE;
 
         if(type == TYPE_SINGLE) {
             Player.Vector4 bounds = spawn(0, 0, 10, 4, 8, color);
@@ -55,9 +56,9 @@ public class Plant extends WorldObject {
             for(int i = 0; i < numSubPatches; i++) {
                 double distance = random.nextDouble()*32+32;
                 double angle = random.nextDouble()*360;
-                int xx = (int)(this.x+Math.cos(Math.toRadians(angle))*distance);
-                int yy = (int)(this.y+Math.sin(Math.toRadians(angle))*distance);
-                Player.Vector4 bounds = spawn(xx, yy, 70, 20, 32, color);
+                int xx = (int)(Math.cos(Math.toRadians(angle))*distance);
+                int yy = (int)(Math.sin(Math.toRadians(angle))*distance);
+                Player.Vector4 bounds = spawn(xx, yy, 30, 10, 32, color);
                 smallestX = Math.min(smallestX, bounds.x1);
                 smallestY = Math.min(smallestY, bounds.y1);
                 largestX = Math.max(largestX, bounds.x2);
@@ -79,18 +80,20 @@ public class Plant extends WorldObject {
         collision = false;
         ArrayList<GameObject> entities = new ArrayList<>();
 
-        Iterator<GameObject> it;
-        for(it = Main.main.visibleChunkObjects.iterator(); it.hasNext();) {
-            GameObject obj = it.next();
-            if (obj instanceof Arrow || (obj instanceof Healable && obj.depth > this.depth))
-                if(obj.mask != null)
-                    if (obj.mask.isColliding(this.mask)) {
-                        entities.add(obj);
-                        collision = true;
-                   }
-        }
+//        if(main.player.mask.isColliding(this.mask)) {
+//            collision = true;
+//            entities.add(main.player);
+//        }
 
-        if(collision != prevCollision) needsUpdate = true;
+        Iterator<GameObject> it;
+        for (it = main.entities.iterator(); it.hasNext(); ) {
+            GameObject obj = it.next();
+                if (obj.mask != null)
+                    if(this.mask.isColliding((int)obj.x, (int)obj.y)) {
+                        collision = true;
+                        entities.add(obj);
+                    }
+        }
 
         boolean collision_EffectivelyFinal = collision;
 
@@ -104,12 +107,13 @@ public class Plant extends WorldObject {
                     }
                 }
             }
-            if(touched)
+            if(touched && !leave.prevTouch)
                 leave.speed = 24d;
             leave.step+=Main.toSlowMotion(random.nextInt((int) Math.max(1, leave.speed * 10))/10d);
             leave.speed=Math.max(0, leave.speed-0.125);
             leave.addX = (int)(Math.cos(Math.toRadians(leave.step))*2d);
             leave.addY = (int)(Math.sin(Math.toRadians(leave.step))*2d);
+            leave.prevTouch = false;
         });
     }
 
@@ -117,6 +121,11 @@ public class Plant extends WorldObject {
     public void render(Renderer r) {
         leaf.forEach(leave -> r.fillRectangle(leave.x-leave.size/2+leave.addX, leave.y-leave.size/2+leave.addY,
                 leave.size, leave.size, leave.color));
+        if(main.showDebugInfo) {
+            r.drawRectangle(mask.x, mask.y,
+                    ((Mask.Rectangle) mask).w, ((Mask.Rectangle) mask).h,
+                    Color.red);
+        }
     }
 
     @Override
@@ -172,6 +181,7 @@ public class Plant extends WorldObject {
         public int x, y, addX, addY, size;
         public double speed, step;
         public Color color;
+        public boolean prevTouch = false;
 
         public Piece(int x, int y, int size, Color clr, int step) {
             this.x = x;

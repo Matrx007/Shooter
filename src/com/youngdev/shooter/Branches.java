@@ -4,7 +4,6 @@ import com.engine.libs.game.GameObject;
 import com.engine.libs.game.Mask;
 import com.engine.libs.input.Input;
 import com.engine.libs.rendering.Renderer;
-import com.youngdev.shooter.multiPlayerManagement.WorldObject;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -21,7 +20,6 @@ public class Branches extends WorldObject {
         super(15, 1, 14);
 
         random = new Random();
-        this.depth = this.depth*1024+512+random.nextInt(512);
 
         particles = new ArrayList<>();
 
@@ -127,10 +125,6 @@ public class Branches extends WorldObject {
                 xx += Main.toSlowMotion(speedX);
                 yy += Main.toSlowMotion(speedY);
 
-                if(speedX != 0 || speedY != 0) {
-                    needsUpdate = true;
-                }
-
                 owner.x = (int)xx;
                 owner.y = (int)yy;
 
@@ -159,19 +153,30 @@ public class Branches extends WorldObject {
             smallestY = Math.min(smallestY, p.y);
             largestX = Math.min(largestX, p.x);
             largestY = Math.min(largestY, p.y);
+//            System.out.println("p.x = " + p.x);
+//            System.out.println("p.y = " + p.y);
             p.update();
+//            System.out.println("====");
+//            System.out.println("p.x = " + p.x);
+//            System.out.println("p.y = " + p.y);
         });
 
         mask = new Mask.Rectangle(
-                smallestX,
-                smallestY,
-                largestX-smallestX,
-                largestY-smallestY);
+                (int)x+smallestX,
+                (int)y+smallestY,
+                (int)x+largestX-smallestX,
+                (int)y+largestY-smallestY);
     }
 
     @Override
     public void render(Renderer r) {
         particles.forEach(o -> o.render(r));
+
+        if(Main.main.showDebugInfo) {
+            r.fillRectangle(mask.x, mask.y,
+                    ((Mask.Rectangle) mask).w, ((Mask.Rectangle) mask).h,
+                    Color.blue);
+        }
     }
 
     @Override

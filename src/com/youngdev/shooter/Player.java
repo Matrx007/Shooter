@@ -126,7 +126,6 @@ public class Player extends Healable {
         mask = new Mask.Rectangle(x-4, y-4, 8, 8);
         aabbComponent = new AABBComponent(this.mask);
         cm = new AABBCollisionManager(this, collisionMap);
-        needsUpdate = true;
     }
 
     @Override
@@ -141,18 +140,13 @@ public class Player extends Healable {
         }
 
         // HERE: Use keyboard to move
-        if(Main.clientId == clientId) {
-            moveX = (i.isKey(KeyEvent.VK_D) ? 1 : 0) - (i.isKey(KeyEvent.VK_A) ? 1 : 0);
-            moveY = (i.isKey(KeyEvent.VK_S) ? 1 : 0) - (i.isKey(KeyEvent.VK_W) ? 1 : 0);
-        }
-//        moveX *= clientId == Main.clientId ? 1 : 0;
-//        moveY *= clientId == Main.clientId ? 1 : 0;
+        moveX = (i.isKey(KeyEvent.VK_D) ? 1 : 0) - (i.isKey(KeyEvent.VK_A) ? 1 : 0);
+        moveY = (i.isKey(KeyEvent.VK_S) ? 1 : 0) - (i.isKey(KeyEvent.VK_W) ? 1 : 0);
 
         if((moveX != 0 || moveY != 0)) {
             timer = time;
             lastMoveX = moveX;
             lastMoveY = moveY;
-            needsUpdate = true;
         }
 
         targetSpeedX = moveX * maxSpeed;
@@ -199,7 +193,7 @@ public class Player extends Healable {
             int fadingSpeed = random.nextInt(8)+8;
             int size = random.nextInt(4)+2;
             Color color = new Color(baseColor.getRed()+tone, baseColor.getGreen()+tone, baseColor.getBlue()+tone);
-            UniParticle.FadingProcess fadingProcess = new UniParticle.FadingProcess(255, fadingSpeed, false);
+            UniParticle.FadingProcess fadingProcess = new UniParticle.FadingProcess(255, fadingSpeed, true);
             particles.add(new UniParticle(xx, yy, size, true, color, fadingProcess));
         }
 

@@ -1,10 +1,8 @@
 package com.youngdev.shooter;
 
-import com.engine.libs.game.GameObject;
 import com.engine.libs.game.Mask;
 import com.engine.libs.input.Input;
 import com.engine.libs.rendering.Renderer;
-import com.youngdev.shooter.multiPlayerManagement.WorldObject;
 
 import java.util.Random;
 
