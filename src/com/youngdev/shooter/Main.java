@@ -12,7 +12,8 @@ import com.engine.libs.rendering.Filter;
 import com.engine.libs.rendering.RenderUtils;
 import com.engine.libs.rendering.Renderer;
 import com.engine.libs.world.CollisionMap;
-import com.youngdev.shooter.modules.Module;
+import com.sun.javafx.geom.Vec2d;
+import com.sun.javafx.geom.Vec3d;
 
 import javax.imageio.ImageIO;
 import javax.sound.sampled.Clip;
@@ -25,12 +26,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.util.*;
 import java.util.List;
-import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import static com.youngdev.shooter.EnemyBolt.calcColorParameter;
@@ -40,6 +37,7 @@ public class Main extends Game {
     public static Main main;
 
     public static int chunkSize = 128;
+    public int flyCounter;
     private DataInputStream inputStreamReader;
     private DataOutputStream outputStreamWriter;
     private int hoverChunkX, hoverChunkY;
@@ -62,6 +60,8 @@ public class Main extends Game {
     private int numButtons;
     private String[] buttonLabels;
     private BufferedImage[] buttonImages;
+    private ArrayList[] buttonHoverVectors;
+    private boolean[] buttonPrevInside;
     private ArrayList<UniParticle> startMenuButtonParticles;
     public ArrayList<Player> playerEntities;
     private Cursor cursor;
@@ -76,6 +76,8 @@ public class Main extends Game {
     public SoundManager soundManager;
     private boolean[] startMenuButtons_prevHover;
     private boolean startMenuModePrev;
+    public int flySounds;
+    private int tick;
 
     // *** SOUNDS ***
     private Clip noise;
@@ -105,18 +107,21 @@ public class Main extends Game {
         // HERE: Init
 
         buttonLabels = new String[] {
-                "Ühenda serveriga",
-                "Alusta server",
-                "Mängi üksi",
+                "DuleKiva",
+                "Kohandatud mäng",
                 "Krediidid",
+                "Seaded",
                 "Lahku"
         };
-        numButtons = 3;
+        numButtons = 5;
         buttonImages = new BufferedImage[numButtons];
+        buttonPrevInside = new boolean[numButtons];
 
         playerEntities = new ArrayList<>();
 
         startMenuMode = true;
+        flySounds = 5;
+        flyCounter = 0;
 
         soundManager = new SoundManager();
         loadSounds();
@@ -187,7 +192,7 @@ public class Main extends Game {
                 new Point(),
                 null ));
 
-        String text = "Tulekiva";
+        String text = "DuleKiva";
 
 //        g2.setColor(new Color());
 //        g2.fill;
@@ -213,6 +218,8 @@ public class Main extends Game {
 
         startMenuButtonParticles = new ArrayList<>();
 
+        buttonHoverVectors = new ArrayList[numButtons];
+
         for(int i = 0; i < numButtons; i++) {
             BufferedImage image = RenderUtils.createImage(192, 24);
             Graphics2D g = (Graphics2D) image.getGraphics();
@@ -223,6 +230,8 @@ public class Main extends Game {
             g.setColor(Color.black);
             g.setFont(new Font("Nunito Bold", Font.PLAIN, 16));
             g.drawString(buttonLabels[i], 8, 16);
+
+            buttonHoverVectors[i] = new ArrayList<>();
 
             buttonImages[i] = image;
         }
@@ -241,6 +250,21 @@ public class Main extends Game {
         soundManager.addClip("sounds/noiseLow.wav", "noise");
         soundManager.addClip("sounds/buttonHoverBass.wav", "buttonHover");
         soundManager.addClip("sounds/buttonPressedBass.wav", "buttonPress");
+        soundManager.addClip("sounds/flyAway.wav", "flyAway");
+
+        soundManager.addClip("sounds/footsteps/dirt1.wav", "dirt0");
+        soundManager.addClip("sounds/footsteps/dirt2.wav", "dirt1");
+        soundManager.addClip("sounds/footsteps/dirt3.wav", "dirt2");
+        soundManager.addClip("sounds/footsteps/dirt4.wav", "dirt3");
+        soundManager.addClip("sounds/footsteps/dirt5.wav", "dirt4");
+
+        soundManager.addClip("sounds/footsteps/grass0.wav", "grass0");
+        soundManager.addClip("sounds/footsteps/grass1.wav", "grass1");
+
+        soundManager.addClip("sounds/bee.wav", "bee");
+        soundManager.addClip("sounds/beeFlyingAway.wav", "beeFlyingAway");
+
+        soundManager.addClip("sounds/tapping.wav", "branchesTouched");
     }
 
     public void deleteChunk(int x, int y) {
@@ -254,6 +278,10 @@ public class Main extends Game {
 
         int minX = x*chunkSize;
         int minY = y*chunkSize;
+
+//        if(random.nextInt(10) == 0) {
+//            chunk.add(new DuleKiva(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY));
+//        }
 
         if(random.nextBoolean()) {
             chunk.add(new Bush(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY));
@@ -278,7 +306,7 @@ public class Main extends Game {
             chunk.add(new Trash(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY, random.nextInt(2)+2));
         }
 
-        if(true || random.nextInt(4)==1) {
+        if(random.nextInt(8)==1) {
             chunk.add(new Branches(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY));
         }
 
@@ -410,12 +438,12 @@ public class Main extends Game {
         ArrayList<GameObject> addQueue = new ArrayList<>();
         if(!startMenuMode) {
             addQueue.add(player);
-            addQueue.add(player.shadowRenderer);
+//            addQueue.add(player.shadowRenderer);
         }
 
         // HERE: Add chunks that are inside screen to visibleChunkObjects list
-        for(int xx = chunkXTopLeft; xx < chunkXBottomRight; xx++) {
-            for(int yy = chunkYTopLeft; yy < chunkYBottomRight; yy++) {
+        for(int xx = chunkXTopLeft; xx <= chunkXBottomRight; xx++) {
+            for(int yy = chunkYTopLeft; yy <= chunkYBottomRight; yy++) {
                 for(GameObject obj : getChunkArray(xx, yy)) {
                     addQueue.add(obj);
                     if(obj.aabbComponent != null) {
@@ -432,10 +460,10 @@ public class Main extends Game {
                 e.getRenderer().getCamY(),
                 e.getRenderer().getCamX()+e.width,
                 e.getRenderer().getCamY()+e.height);
-        for(int xx = chunkXTopLeft-2; xx < chunkXBottomRight+2; xx++) {
-            for(int yy = chunkYTopLeft-2; yy < chunkYBottomRight+2; yy++) {
-                if(xx > chunkXTopLeft && yy > chunkYTopLeft &&
-                        xx < chunkXBottomRight && yy < chunkYBottomRight) {
+        for(int xx = chunkXTopLeft-8; xx < chunkXBottomRight+8; xx++) {
+            for(int yy = chunkYTopLeft-8; yy < chunkYBottomRight+8; yy++) {
+                if(xx >= chunkXTopLeft && yy >= chunkYTopLeft &&
+                        xx <= chunkXBottomRight && yy <= chunkYBottomRight) {
                     continue;
                 }
 
@@ -511,74 +539,31 @@ public class Main extends Game {
     public void update(Core core) {
         Input i = core.getInput();
 
+        tick++;
+        if(tick > 59) {
+            tick = 0;
+
+            // TODO: Do something every 1 second
+            flyCounter = 0;
+        }
+
         if(startMenuMode) {
             boolean found = false;
             camera.bluishEffect = 0f;
             int x = core.getInput().getMouseX();
             int y = core.getInput().getMouseY();
-            int alphaSpeed = 12;
+//            int alphaSpeed = 12;
             for(int k = 0; k < numButtons; k++) {
                 int xx = 16;
                 int yy = 64+32*k;
-                if(AdvancedMath.inRange(x, y, xx, yy, 192, 24)) {
-                    found = true;
-                    for(int t0 = 0; t0 < 8; t0++) {
-                        if(random.nextInt(4) > 0) continue;
+                boolean inside = false;
+//                if(AdvancedMath.inRange(x, y, xx, yy, 192, 24)) {
+                if(AdvancedMath.inRange(x, y, 0, yy, width, 24)) {
+                    inside = true;
 
-                        int x1 = random.nextInt(192);
-                        int x2 = random.nextInt(192);
-
-                        {
-                            // HERE: Top side
-                            Color color = new Color(
-                                    cursor.cursorColor.getRed()+random.nextInt(20),
-                                    cursor.cursorColor.getGreen()+random.nextInt(20),
-                                    cursor.cursorColor.getBlue()+random.nextInt(20)
-                            );
-                            UniParticle.FadingProcess fadingProcess =
-                                    new UniParticle.FadingProcess(255, alphaSpeed, true);
-                            startMenuButtonParticles.add(new UniParticle(xx+x1, yy, random.nextBoolean() ? 2 : 4, false,
-                                    color, fadingProcess));
-                        }
-                        {
-                            // HERE: Bottom side
-                            Color color = new Color(
-                                    cursor.cursorColor.getRed()+random.nextInt(20),
-                                    cursor.cursorColor.getGreen()+random.nextInt(20),
-                                    cursor.cursorColor.getBlue()+random.nextInt(20)
-                            );
-                            UniParticle.FadingProcess fadingProcess =
-                                    new UniParticle.FadingProcess(255, alphaSpeed, true);
-                            startMenuButtonParticles.add(new UniParticle(xx+x2, yy+24, random.nextBoolean() ? 2 : 4, false,
-                                    color, fadingProcess));
-                        }
-                    }
-                    int y1 = random.nextInt(24);
-                    int y2 = random.nextInt(24);
-                    if (random.nextInt(4) == 0) {
-                        // HERE: Left side
-                        Color color = new Color(
-                                cursor.cursorColor.getRed()+random.nextInt(20),
-                                cursor.cursorColor.getGreen()+random.nextInt(20),
-                                cursor.cursorColor.getBlue()+random.nextInt(20)
-                        );
-                        UniParticle.FadingProcess fadingProcess =
-                                new UniParticle.FadingProcess(255, alphaSpeed, true);
-                        startMenuButtonParticles.add(new UniParticle(xx, yy+y1, random.nextBoolean() ? 2 : 4, false,
-                                color, fadingProcess));
-                    }
-                    if (random.nextInt(4) == 0) {
-                        // HERE: Right side
-                        Color color = new Color(
-                                cursor.cursorColor.getRed()+random.nextInt(20),
-                                cursor.cursorColor.getGreen()+random.nextInt(20),
-                                cursor.cursorColor.getBlue()+random.nextInt(20)
-                        );
-                        UniParticle.FadingProcess fadingProcess =
-                                new UniParticle.FadingProcess(255, alphaSpeed, true);
-                        startMenuButtonParticles.add(new UniParticle(xx+192, yy+y2, random.nextBoolean() ? 2 : 4, false,
-                                color, fadingProcess));
-                    }
+                    if(!startMenuButtons_prevHover[k])
+                        buttonHoverVectors[k].add(new Vec3d(
+                                i.getMouseX(), 1d, 1d));
 
                     if(!startMenuButtons_prevHover[k]) {
                         soundManager.playSound("buttonHover", 0.5f);
@@ -592,8 +577,25 @@ public class Main extends Game {
                         soundManager.playSound("buttonPress", 0.5f);
                     }
                     startMenuButtons_prevHover[k] = true;
-                } else startMenuButtons_prevHover[k] = false;
-                cursor.visible = !found;
+                } else {
+                    inside = false;
+                    startMenuButtons_prevHover[k] = false;
+                }
+//                cursor.visible = !found;
+                Iterator iterator = buttonHoverVectors[k].iterator();
+                for(;iterator.hasNext();) {
+                    Object obj = iterator.next();
+                    if(obj instanceof Vec3d) {
+                        if(!inside || ((Vec3d)obj).y > 0.4d)
+                            ((Vec3d) obj).y /= 1.05;
+                        ((Vec3d) obj).z -= 0.05;
+//                            ((Vec3d) obj).z -= 0.01;
+                        if(((Vec3d) obj).y <= 0.003) {
+                            iterator.remove();
+                        }
+                    }
+                }
+                System.out.println("size = " + buttonHoverVectors[k].size());
             }
 
             startMenuButtonParticles.removeIf(p -> {
@@ -706,7 +708,8 @@ public class Main extends Game {
 
         if(i.isKeyDown(VK_F5)) {
             // HERE: Take a "Mega" screenshot
-            BufferedImage image = new BufferedImage(16384, 16384, BufferedImage.TYPE_INT_RGB);
+            BufferedImage image = new BufferedImage(24*chunkSize,
+                    16*chunkSize, BufferedImage.TYPE_INT_RGB);
             Renderer r = new Renderer(image.getGraphics(), image.getWidth(), image.getHeight());
             r.absolute();
             r.fillRectangle(0, 0, image.getWidth(), image.getHeight(), grassColor);
@@ -714,10 +717,10 @@ public class Main extends Game {
             int centerX = e.getRenderer().getCamX()+width/2;
             int centerY = e.getRenderer().getCamY()+height/2;
 
-            int chunkX1 = (centerX-8192)/chunkSize;
-            int chunkY1 = (centerY-8192)/chunkSize;
-            int chunkX2 = (centerX+8192)/chunkSize;
-            int chunkY2 = (centerY+8192)/chunkSize;
+            int chunkX1 = (centerX)/chunkSize-12;
+            int chunkY1 = (centerY)/chunkSize-8;
+            int chunkX2 = (centerX)/chunkSize+12;
+            int chunkY2 = (centerY)/chunkSize+8;
 
             r.relative();
             r.setCamX( chunkX1*chunkSize);
@@ -823,8 +826,8 @@ public class Main extends Game {
         // HERE: Generate new chunks
         if(prevCamX != core.getRenderer().getCamX() || prevCamY != core.getRenderer().getCamY()) {
             findOnScreenObjects();
-            for (int xx = chunkXTopLeft - 2; xx < chunkXBottomRight + 2; xx++) {
-                for (int yy = chunkYTopLeft - 2; yy < chunkYBottomRight + 2; yy++) {
+            for (int xx = chunkXTopLeft - 4; xx < chunkXBottomRight + 4; xx++) {
+                for (int yy = chunkYTopLeft - 4; yy < chunkYBottomRight + 4; yy++) {
                     if (getChunkArray(xx, yy).size() == 0) {
                         generateChunk(xx, yy);
                     }
@@ -865,6 +868,8 @@ public class Main extends Game {
                 if(music.isRunning()) music.stop();
                 if(!noise.isRunning()) noise.start();
                 noise.loop(Clip.LOOP_CONTINUOUSLY);
+                camera.cX = player.x-width/2d;
+                camera.cY = player.y-height/2d;
             }
         }
         startMenuModePrev = startMenuMode;
@@ -933,6 +938,8 @@ public class Main extends Game {
             );
 
         });*/
+
+        r.setClip(0, 0, e.width, e.height);
 
         r.fillRectangle(0, 0, e.width, e.height, grassColor);
 
@@ -1108,10 +1115,23 @@ public class Main extends Game {
             // HERE: Render buttons
             int y = 64;
             int x = 16;
+            Shape clip = r.getG().getClip();
             for (int i = 0; i < numButtons; i++) {
+                r.setClip(0, y, width,
+                        buttonImages[i].getHeight());
+                for(Object obj : buttonHoverVectors[i]) {
+                    if(obj instanceof Vec3d) {
+                        int w = (int)((1 - ((Vec3d) obj).z)*width*2d);
+                        r.fillRectangle((int)((Vec3d) obj).x-w/2d, y, w,
+                                buttonImages[i].getHeight(),
+                                new Color(255, 255, 255,
+                                        (int)(((Vec3d) obj).y*128d)));
+                    }
+                }
                 r.drawImage(x, y, buttonImages[i]);
                 y += 32;
             }
+            r.getG().setClip(clip);
             startMenuButtonParticles.forEach(p -> p.render(r));
         }
 

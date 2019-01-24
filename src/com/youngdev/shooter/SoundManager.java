@@ -90,6 +90,7 @@ public class SoundManager {
             System.out.println("SoundManager: unknown sample \""+name+"\"");
         } else {
             try {
+
                 Clip clip = (Clip) AudioSystem.getLine(info.get(name));
                 clip.open(audioFormats.get(name), audioData.get(name), 0, sizes.get(name));
                 FloatControl floatControl = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);

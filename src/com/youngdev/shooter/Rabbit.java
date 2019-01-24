@@ -11,14 +11,15 @@ import java.util.Random;
 
 public class Rabbit extends Healable {
 
-    double speedTick;
-    public double direction;
-    public double directionTarget;
+    private double speedTick;
+    private double direction;
+    private double directionTarget;
     double speed;
-    double speedTarget;
-    double maxSpeed;
-    double movingTime;
-    public boolean escaping;
+    private double speedTarget;
+    private double maxSpeed;
+    private double movingTime;
+    private int step;
+    private boolean escaping;
     private Random random;
     private boolean unStucking;
     public final int Type = 8;
@@ -40,13 +41,15 @@ public class Rabbit extends Healable {
         direction = random.nextInt(359);
         directionTarget = random.nextInt(359);
         speed = 0;
-        maxSpeed = 2d+random.nextDouble()*2d;
+        maxSpeed = 4d;//+random.nextDouble()*2d;
         speedTarget = maxSpeed;
         movingTime = 0;
+        step = 0;
     }
 
     @Override
     public void update(Input i) {
+        step+=8;
         if (escaping) {
             directionTarget = Fly.angle(x, y, Main.main.player.x, Main.main.player.y) - 180;
             speedTarget = maxSpeed;
@@ -72,8 +75,16 @@ public class Rabbit extends Healable {
         if(collideWithOthers) {
             unStucking = Main.collisionMap.collisionWithExcept(this.mask, aabbComponent);
             if (unStucking) {
-                double amountX = Math.cos(Math.toRadians(direction)) * speed;
-                double amountY = Math.sin(Math.toRadians(direction)) * speed;
+                double spd = Math.cos(Math.toRadians(step))*speed;
+                double amountX;
+                double amountY;
+                if(spd > 0) {
+                    amountX = Math.cos(Math.toRadians(direction)) * spd;
+                    amountY = Math.sin(Math.toRadians(direction)) * spd;
+                } else {
+                    amountX = 0;
+                    amountY = 0;
+                }
                 x += amountX;
                 y += amountY;
                 this.mask.move(amountX, amountY);
@@ -86,29 +97,35 @@ public class Rabbit extends Healable {
                         Math.sin(Math.toRadians(direction)) * Main.toSlowMotion(this.speed));
             }
         } else {
-            cm.move(Math.cos(Math.toRadians(direction)) * Main.toSlowMotion(this.speed),
-                    Math.sin(Math.toRadians(direction)) * Main.toSlowMotion(this.speed));
+            /*cm.move(Math.cos(Math.toRadians(direction)) * Main.toSlowMotion(
+                    Math.abs(Math.pow(Math.cos(Math.toRadians(step)), 1))*speed),
+                    Math.sin(Math.toRadians(direction)) * Main.toSlowMotion(
+                            Math.abs(Math.pow(Math.cos(Math.toRadians(step)), 1))*speed));*/
+            cm.move(Math.cos(Math.toRadians(direction)) * Main.toSlowMotion(
+                    (1-(step%150)/150d)*speed*2d),
+                    Math.sin(Math.toRadians(direction)) * Main.toSlowMotion(
+                            (1-(step%150)/150d)*speed*2d));
         }
     }
 
     @Override
     public void render(Renderer r) {
+        // HERE: --- BODY ---
         double[][] points = new double[][]{
                 rotatePoint(x-8, y-12, x, y, direction+90),
                 rotatePoint(x+8, y-12, x, y, direction+90),
                 rotatePoint(x+8, y+8, x, y, direction+90),
                 rotatePoint(x-8, y+8, x, y, direction+90)
         };
-//        Color c = Main.collisionMap.collisionWithExcept(mask, aabbComponent) ? Color.black : new Color(240, 240,240);
         fillPoly(points, new Color(240, 240,240), r);
 
+        // HERE: --- HEAD ---
         double[][] headPoints = new double[][]{
                 rotatePoint(-5, -5, 0, 0, directionTarget-direction),
                 rotatePoint(5, -5, 0, 0, directionTarget-direction),
                 rotatePoint(5, 5, 0, 0, directionTarget-direction),
                 rotatePoint(-5, 5, 0, 0, directionTarget-direction)
         };
-
         points = new double[][]{
                 rotatePoint(x+headPoints[0][0], y+headPoints[0][1]-14, x, y, direction+90),
                 rotatePoint(x+headPoints[1][0], y+headPoints[1][1]-14, x, y, direction+90),
@@ -117,13 +134,13 @@ public class Rabbit extends Healable {
         };
         fillPoly(points, new Color(220, 220,220), r);
 
+        // HERE: --- NOSE ---
         double[][] nosePoints = new double[][]{
                 rotatePoint(-2, -6, 0, 0, directionTarget-direction),
                 rotatePoint(2, -6, 0, 0, directionTarget-direction),
                 rotatePoint(2, -4, 0, 0, directionTarget-direction),
                 rotatePoint(-2, -4, 0, 0, directionTarget-direction)
         };
-
         points = new double[][]{
                 rotatePoint(x+nosePoints[0][0], y+nosePoints[0][1]-14, x, y, direction+90),
                 rotatePoint(x+nosePoints[1][0], y+nosePoints[1][1]-14, x, y, direction+90),
@@ -132,6 +149,7 @@ public class Rabbit extends Healable {
         };
         fillPoly(points, new Color(200, 200,200), r);
 
+        // HERE: --- EYES ---
         int eyeXOffset = 3;
         int eyeYOffset = -4;
 
@@ -175,6 +193,7 @@ public class Rabbit extends Healable {
 
         r.fillCircle(xPoints[0], yPoints[0], 3, new Color(70, 70, 70));
 
+        // HERE: --- EARS ---
         double[][] rightEarPoints = new double[][]{
                 rotatePoint(5, -2, 0, 0, directionTarget-direction+45),
                 rotatePoint(13, -2, 0, 0, directionTarget-direction+45),
@@ -205,6 +224,7 @@ public class Rabbit extends Healable {
         };
         fillPoly(points, new Color(190, 190,190), r);
 
+        // HERE: --- TAIL ---
         points = new double[][]{
                 rotatePoint(x-4, y+8-4, x, y, direction+90),
                 rotatePoint(x+4, y+8-4, x, y, direction+90),

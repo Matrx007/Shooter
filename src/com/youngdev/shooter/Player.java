@@ -24,7 +24,7 @@ public class Player extends Healable {
     private boolean found;
     private boolean waitingForRelease;
     public String name = "Jane Doe";
-    public boolean buildingMode, inventoryOpen, leftHandShooting, rightHandShooting, clipOverlayOpen;
+    public boolean prevOnPlant, onPlant, buildingMode, inventoryOpen, leftHandShooting, rightHandShooting, clipOverlayOpen;
     public int xx, yy, invSize = 24, midX, midY, selectedItem, time=60, timer, leftHandReload, rightHandReload,
             reloadTime = 50, bulletTimingCap = 5, leftHandBulletTimingCapCounter, leftHandBulletAmountCounter,
             rightHandBulletTimingCapCounter, rightHandBulletAmountCounter, bulletsPerShot = 5, ammo = 34, maxAmmo = 45,
@@ -47,6 +47,7 @@ public class Player extends Healable {
     public ShadowRenderer shadowRenderer;
     public final int Type = 7;
     public CollisionMap collisionMap;
+    public int step;
 
     public Player(int x, int y) {
         super(7, x, y, 4, 4, 200, 0, 10, false, false);
@@ -66,6 +67,9 @@ public class Player extends Healable {
         rightHandBulletAmountCounter = 0;
         leftHandBulletTimingCapCounter = 0;
         rightHandBulletTimingCapCounter = 0;
+
+        onPlant = false;
+        prevOnPlant = false;
 
         lastCoinX = x;
         lastCoinY = y-256;
@@ -147,7 +151,27 @@ public class Player extends Healable {
             timer = time;
             lastMoveX = moveX;
             lastMoveY = moveY;
+            step++;
+
+            if(step % 20 == 1) {
+                // TODO: Select sound depending on where
+                // TODO: the player is currently standing
+                if(onPlant) {
+                    Main.main.soundManager.playSound("grass"+
+                            ((step/20 % 2 == 0) ? 1 : 0), -15f);
+                } else {
+                    Main.main.soundManager.playSound("dirt" +
+                            (random.nextInt(4)), -10f);
+                }
+            } else if(!prevOnPlant && onPlant) {
+                Main.main.soundManager.playSound("grass"+
+                        (random.nextBoolean() ? 1 : 0), -15f);
+            }
+        } else {
+            step = 0;
         }
+        prevOnPlant = onPlant;
+        onPlant = false;
 
         targetSpeedX = moveX * maxSpeed;
         targetSpeedY = moveY * maxSpeed;

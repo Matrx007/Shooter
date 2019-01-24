@@ -2,6 +2,7 @@ package com.youngdev.shooter;
 
 import com.engine.libs.game.GameObject;
 import com.engine.libs.game.Mask;
+import com.engine.libs.game.behaviors.AABBCollisionManager;
 import com.engine.libs.input.Input;
 import com.engine.libs.rendering.Renderer;
 
@@ -15,9 +16,13 @@ public class Branches extends WorldObject {
     private int smallestX, smallestY, largestX, largestY;
     private Color baseColor0;
     private Random random;
+    private AABBCollisionManager cm;
 
     public Branches(int x, int y) {
         super(15, 1, 14);
+
+        this.x = x;
+        this.y = y;
 
         random = new Random();
 
@@ -25,11 +30,18 @@ public class Branches extends WorldObject {
 
         // HERE: Generate branches
         baseColor0 = new Color(75, 11, 13);
-        for(int i = 0; i < random.nextInt(4)+10; i++) {
-            particles.add(createParticle(random.nextInt(50)-25,
-                    random.nextInt(50)-25));
+        for(int i = 0; i < random.nextInt(10)+10+50+
+                ((random.nextInt(5)==1) ? 50 : 0); i++) {
+            double angle = random.nextDouble()*360d;
+            double distance = calcGaussian(random.nextDouble(), 4)*70;
+
+            double xx = Math.cos(Math.toRadians(angle))*distance;
+            double yy = Math.sin(Math.toRadians(angle))*distance;
+
+            particles.add(createParticle((int)xx, (int)yy));
         }
         this.mask = new Mask.Rectangle(x-30, y-30, 60, 60);
+        cm = new AABBCollisionManager(this, Main.collisionMap);
     }
 
     public UniParticle createParticle(int addX, int addY) {
@@ -40,7 +52,7 @@ public class Branches extends WorldObject {
                 baseColor0.getBlue()+tone
         );
 
-        double length = random.nextDouble()*4+5;
+        double length = random.nextDouble()*4d+5;
         double angle = Math.toRadians(random.nextInt(359));
         int x1 = (int)(Math.cos(angle)*length);
         int y1 = (int)(Math.sin(angle)*length);
@@ -82,6 +94,7 @@ public class Branches extends WorldObject {
 
             @Override
             public void update() {
+//                System.out.println("xx = " + xx);
                 double prevAngle = angle;
                 speedX *= 0.5;
                 speedY *= 0.5;
@@ -151,8 +164,8 @@ public class Branches extends WorldObject {
         particles.forEach((p) -> {
             smallestX = Math.min(smallestX, p.x);
             smallestY = Math.min(smallestY, p.y);
-            largestX = Math.min(largestX, p.x);
-            largestY = Math.min(largestY, p.y);
+            largestX = Math.max(largestX, p.x);
+            largestY = Math.max(largestY, p.y);
 //            System.out.println("p.x = " + p.x);
 //            System.out.println("p.y = " + p.y);
             p.update();
@@ -162,18 +175,20 @@ public class Branches extends WorldObject {
         });
 
         mask = new Mask.Rectangle(
-                (int)x+smallestX,
-                (int)y+smallestY,
-                (int)x+largestX-smallestX,
-                (int)y+largestY-smallestY);
+                (int)smallestX-10,
+                (int)smallestY-10,
+                (int)largestX-smallestX+20,
+                (int)largestY-smallestY+20);
     }
 
     @Override
     public void render(Renderer r) {
-        particles.forEach(o -> o.render(r));
+        particles.forEach(o -> {
+            o.render(r);
+        });
 
         if(Main.main.showDebugInfo) {
-            r.fillRectangle(mask.x, mask.y,
+            r.drawRectangle(mask.x, mask.y,
                     ((Mask.Rectangle) mask).w, ((Mask.Rectangle) mask).h,
                     Color.blue);
         }
@@ -187,5 +202,9 @@ public class Branches extends WorldObject {
     @Override
     public void shareReceive(String s) {
 
+    }
+
+    public static double calcGaussian(double x, int pow) {
+        return Math.pow(Math.sin(x+ Math.PI/2), pow);
     }
 }

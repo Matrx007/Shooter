@@ -85,6 +85,12 @@ public class Plant extends WorldObject {
 //            entities.add(main.player);
 //        }
 
+        if(this.mask.isColliding((int)main.player.x, (int)main.player.y)) {
+            collision = true;
+            entities.add(main.player);
+            main.player.onPlant = true;
+        }
+
         Iterator<GameObject> it;
         for (it = main.entities.iterator(); it.hasNext(); ) {
             GameObject obj = it.next();

@@ -29,7 +29,7 @@ public class Tree extends WorldObject {
 
     public Tree(int x, int y, int type) {
         super(11, 20, 13);
-        this.depth = 20;
+//        this.depth = 20;
         this.x = x;
         this.y = y;
         this.fliesInside = true;
@@ -39,12 +39,12 @@ public class Tree extends WorldObject {
 
         // HERE: Fix depth
         this.random = new Random();
-        this.depth = random.nextInt(1023)+depth*1024;
+        this.depth = random.nextInt(1023)+20*1024;
 
         leaf = new ArrayList<>();
         brunches = new ArrayList<>();
 //        type = random.nextBoolean() ? TYPE_SAVANNA : TYPE_OAK;
-        this.type = type;
+        this.type = TYPE_SAVANNA;
         solid = true;
 
         // HERE: Bush gen V 1.0
