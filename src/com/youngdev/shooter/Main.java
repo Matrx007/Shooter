@@ -87,7 +87,7 @@ public class Main extends Game {
         new Main();
     }
 
-    private Map<Point, CopyOnWriteArrayList<GameObject>> chunks;
+    private Map<Point, ArrayList<GameObject>> chunks;
 
     public Main() {
         main = this;
@@ -310,8 +310,11 @@ public class Main extends Game {
             chunk.add(new Branches(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY));
         }
 
-        if(random.nextInt(5)==3) {
-            int xx = random.nextInt(chunkSize);
+        if(random.nextInt(8)==1) {
+            addEntities.add(new FlyGroup(minX+chunkSize/2,
+                    minY+chunkSize/2,
+                    random.nextInt(15)+10));
+            /*int xx = random.nextInt(chunkSize);
             int yy = random.nextInt(chunkSize);
             for(int i = 0; i < random.nextInt(15)+15; i++) {
                 double angle = random.nextInt(359);
@@ -320,11 +323,11 @@ public class Main extends Game {
                 int yyy = minY + yy + (int) (Math.sin(Math.toRadians(angle))*distance);
                 flies.add(new Fly(xxx, yyy));
 //                System.out.println("Spawned a fly at ("+xxx+","+yyy+")");
-            }
+            }*/
         }
 
-        if(random.nextInt(6)==1) {
-            entities.add(new Rabbit(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY));
+        if(random.nextInt(4)==1) {
+            addEntities.add(new Rabbit(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY));
         }
 
         /*if(random.nextInt(7)==3) {
@@ -349,25 +352,25 @@ public class Main extends Game {
 
         getChunkArray(x, y).addAll(chunk);
 
-        if(isOnScreen(x, y, 2))
-            findOnScreenObjects();
+//        if(isOnScreen(x, y, 2))
+//            findOnScreenObjects();
     }
 
-    public CopyOnWriteArrayList<GameObject> getChunkArray(int x, int y) {
+    public ArrayList<GameObject> getChunkArray(int x, int y) {
         Point loc = new Point(x, y);
         if(!chunks.containsKey(loc)) {
-            chunks.put(loc, new CopyOnWriteArrayList<>());
+            chunks.put(loc, new ArrayList<>());
         }
         return chunks.get(loc);
     }
 
-    public CopyOnWriteArrayList<GameObject> getAndGenerateChunk(int x, int y) {
+    public ArrayList<GameObject> getAndGenerateChunk(int x, int y) {
         Point loc = new Point(x, y);
         if(!chunks.containsKey(loc)) {
             generateChunk(loc.x, loc.y);
         }
-        CopyOnWriteArrayList<GameObject> chunk = chunks.get(loc);
-        return chunk == null ? new CopyOnWriteArrayList<>() :
+        ArrayList<GameObject> chunk = chunks.get(loc);
+        return chunk == null ? new ArrayList<>() :
                 chunk;
     }
 
@@ -430,8 +433,13 @@ public class Main extends Game {
     }
 
     void findOnScreenObjects() {
-        findOnScreenCalled = true;
-        if(findOnScreenBlocked) return;
+//        findOnScreenCalled = true;
+//        if(findOnScreenBlocked) return;
+
+        int chunkXTopLeft = (int)Math.floor(camera.cX/(double)chunkSize);
+        int chunkYTopLeft = (int)Math.floor(camera.cY/(double)chunkSize);
+        int chunkXBottomRight = (int)Math.ceil((e.width+camera.cX)/(double)chunkSize);
+        int chunkYBottomRight = (int)Math.ceil((e.height+camera.cY)/(double)chunkSize);
 
         collisionMap.empty();
         ArrayList<GameObject> visibleChunksObjectsTemporary = new ArrayList<>();
@@ -441,7 +449,10 @@ public class Main extends Game {
 //            addQueue.add(player.shadowRenderer);
         }
 
-        // HERE: Add chunks that are inside screen to visibleChunkObjects list
+//        System.out.println(chunkXTopLeft);
+//        System.out.println(chunkYTopLeft);
+
+        /*// HRE: Add chunks that are inside screen to visibleChunkObjects list
         for(int xx = chunkXTopLeft; xx <= chunkXBottomRight; xx++) {
             for(int yy = chunkYTopLeft; yy <= chunkYBottomRight; yy++) {
                 for(GameObject obj : getChunkArray(xx, yy)) {
@@ -452,7 +463,9 @@ public class Main extends Game {
                 }
 //                visibleChunkObjects.addAll(getChunkArray(xx, yy));
             }
-        }
+        }*/
+
+//        System.out.println("Now [1]: "+addQueue.size());
 
         // HERE: Add additional ones that are partly on screen
         Mask.Rectangle visibleAreaMask = new Mask.Rectangle(
@@ -460,31 +473,35 @@ public class Main extends Game {
                 e.getRenderer().getCamY(),
                 e.getRenderer().getCamX()+e.width,
                 e.getRenderer().getCamY()+e.height);
-        for(int xx = chunkXTopLeft-8; xx < chunkXBottomRight+8; xx++) {
-            for(int yy = chunkYTopLeft-8; yy < chunkYBottomRight+8; yy++) {
-                if(xx >= chunkXTopLeft && yy >= chunkYTopLeft &&
-                        xx <= chunkXBottomRight && yy <= chunkYBottomRight) {
-                    continue;
-                }
+        for(int xx = chunkXTopLeft-4; xx < chunkXBottomRight+4; xx++) {
+            for(int yy = chunkYTopLeft-4; yy < chunkYBottomRight+4; yy++) {
+//                if(xx >= chunkXTopLeft && yy >= chunkYTopLeft &&
+//                        xx <= chunkXBottomRight && yy <= chunkYBottomRight) {
+//                    continue;
+//                }
 
-                getChunkArray(xx, yy).forEach(obj -> {
-                    if(obj.mask.isColliding(visibleAreaMask)) {
+                ArrayList<GameObject> chunk = getChunkArray(xx, yy);
+                GameObject obj;
+                for(int j = chunk.size()-1; j >= 0; j--) {
+                    obj = chunk.get(j);
+                    if(visibleAreaMask.isColliding(obj.mask)) {
                         addQueue.add(obj);
                         if(obj.aabbComponent != null) {
                             collisionMap.add(obj.aabbComponent);
                         }
                     }
-                });
+                }
             }
         }
+//        System.out.println("Now [2]: "+addQueue.size());
 
 
         int camX = e.getRenderer().getCamX();
         int camY = e.getRenderer().getCamY();
         // HERE: Also add entities
         Iterator<GameObject> iterator = entities.iterator();
-        while(iterator.hasNext()) {
-            GameObject obj = iterator.next();
+        for(int j = entities.size()-1; j >= 0; j--) {
+            GameObject obj = entities.get(j);
             Point chunkLoc = getChunkLocation((int)obj.x, (int)obj.y);
             if(isOnScreen(chunkLoc.x, chunkLoc.y, 2)) {
                 addQueue.add(obj);
@@ -494,10 +511,9 @@ public class Main extends Game {
                         collisionMap.add(obj.aabbComponent);
                     }
                 }
-            } else {
-                iterator.remove();
             }
         }
+//        System.out.println("Now [3]: "+addQueue.size());
 
         // HERE: Add coins
         Iterator<GameObject> iterator1 = coins.iterator();
@@ -639,6 +655,9 @@ public class Main extends Game {
         Iterator<GameObject> it2 = entities.iterator();
         while(it2.hasNext()) {
             GameObject entity = it2.next();
+            entity.dead = entity.dead ||
+                    !isPixelOnScreen((int)entity.x,
+                            (int)entity.y, 10);
             if(entity.dead) {
                 it2.remove();
             } else {
@@ -676,8 +695,8 @@ public class Main extends Game {
         camera.apply(core.getRenderer());
         chunkXTopLeft = (int)Math.floor(camera.cX/(double)chunkSize);
         chunkYTopLeft = (int)Math.floor(camera.cY/(double)chunkSize);
-        chunkXBottomRight = (int)Math.floor((e.width+camera.cX)/(double)chunkSize);
-        chunkYBottomRight = (int)Math.floor((e.height+camera.cY)/(double)chunkSize);
+        chunkXBottomRight = (int)Math.ceil((e.width+camera.cX)/(double)chunkSize);
+        chunkYBottomRight = (int)Math.ceil((e.height+camera.cY)/(double)chunkSize);
 
         // HERE: Gather together all chunks that are visible
         // HERE: and put them to visibleChunkObjects
@@ -701,7 +720,7 @@ public class Main extends Game {
 
             for(int j = chunkY1; j < chunkY2; j++) {
                 for(int k = chunkX1; k < chunkX2; k++) {
-                    getAndGenerateChunk(k, j);
+                    generateChunk(k, j);
                 }
             }
         }
@@ -825,7 +844,7 @@ public class Main extends Game {
 
         // HERE: Generate new chunks
         if(prevCamX != core.getRenderer().getCamX() || prevCamY != core.getRenderer().getCamY()) {
-            findOnScreenObjects();
+//            findOnScreenObjects();
             for (int xx = chunkXTopLeft - 4; xx < chunkXBottomRight + 4; xx++) {
                 for (int yy = chunkYTopLeft - 4; yy < chunkYBottomRight + 4; yy++) {
                     if (getChunkArray(xx, yy).size() == 0) {
@@ -835,8 +854,9 @@ public class Main extends Game {
             }
         }
 
-        findOnScreenBlocked = false;
-        if(findOnScreenCalled) findOnScreenObjects();
+//        findOnScreenBlocked = false;
+//        if(findOnScreenCalled)
+        findOnScreenObjects();
 
         if(!startMenuMode) {
             player.castRays();

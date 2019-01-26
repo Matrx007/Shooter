@@ -30,10 +30,10 @@ public class Branches extends WorldObject {
 
         // HERE: Generate branches
         baseColor0 = new Color(75, 11, 13);
-        for(int i = 0; i < random.nextInt(10)+10+50+
-                ((random.nextInt(5)==1) ? 50 : 0); i++) {
+        for(int i = random.nextInt(20)+
+                ((random.nextInt(5)==1) ? 50 : 0); i >= 0; i--) {
             double angle = random.nextDouble()*360d;
-            double distance = calcGaussian(random.nextDouble(), 4)*70;
+            double distance = calcGaussian(random.nextDouble(), 4)*40;
 
             double xx = Math.cos(Math.toRadians(angle))*distance;
             double yy = Math.sin(Math.toRadians(angle))*distance;
@@ -42,6 +42,7 @@ public class Branches extends WorldObject {
         }
         this.mask = new Mask.Rectangle(x-30, y-30, 60, 60);
         cm = new AABBCollisionManager(this, Main.collisionMap);
+        this.depth = this.depth*1024+512+random.nextInt(512);
     }
 
     public UniParticle createParticle(int addX, int addY) {

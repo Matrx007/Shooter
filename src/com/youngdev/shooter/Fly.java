@@ -13,11 +13,12 @@ import java.util.Random;
 
 public class Fly extends WorldObject {
     public boolean state; // TRUE - Idle, FALSE - Fly away
-    private double targetX, targetY, angle, speed;
+    private double targetX, targetY, speed;
+    public double angle;
     private Random random;
     public final int Type = 5;
     private int minDistanceToFlyAway, flyCounter;
-    private double direction;
+    public double direction;
     private double prevX, prevY;
 
     public Fly(int x, int y) {
@@ -48,25 +49,6 @@ public class Fly extends WorldObject {
         targetY = y + random.nextInt(32) - 16;
         flyCounter = 0;
 
-        if(!state) {
-            flyAway(false);
-            double minDis = Double.MAX_VALUE;
-            Healable closestEnemy = null;
-            Iterator<GameObject> it;
-            for(it = Main.main.visibleChunkObjects.iterator(); it.hasNext();) {
-                GameObject obj = it.next();
-                if (obj instanceof Healable && !((Healable) obj).isEnemy) {
-                    double distance = Math.hypot((x - obj.x), (y - obj.y));
-                    if (distance <= minDis) {
-                        minDis = distance;
-                        closestEnemy = (Healable) obj;
-                    }
-                }
-            }
-            if(closestEnemy != null)
-                angle = angle(closestEnemy.x, closestEnemy.y,
-                        x, y) - 180;
-        }
         minDistanceToFlyAway = 75 + random.nextInt(75);
     }
 
@@ -74,39 +56,10 @@ public class Fly extends WorldObject {
     public void update(Input input) {
         if(dead) return;
         if(state) {
-            double minDis = Double.MAX_VALUE;
-            Healable closestEnemy = null;
-            Iterator<GameObject> it;
-            for(it = Main.main.visibleChunkObjects.iterator(); it.hasNext();) {
-                GameObject obj = it.next();
-                if(obj instanceof Healable && !((Healable) obj).isEnemy) {
-                    double distance = Math.hypot((x - obj.x), (y - obj.y));
-                    if(distance <= minDis) {
-                        minDis = distance;
-                        closestEnemy = (Healable) obj;
-                    }
-                }
-            }
-
-            if (minDis < minDistanceToFlyAway && closestEnemy != null) {
-                state = false;
-                angle = angle(closestEnemy.x, closestEnemy.y,
-                        x, y)-180+random.nextInt(90)-45;
-                if(Main.main.isPixelOnScreen((int)x, (int)y)) {
-                    Main.main.flies.forEach(f -> {
-                        if(Fly.distance(x, y, f.x, f.y) < 64) {
-                            flyCounter++;
-                        }
-                    });
-                    if(flyCounter > 0)
-                        flyAway(false);
-                    else flyAway(true);
-                    flyCounter = 0;
-                }
-            } else {
+            {
                 if(distance(x, y, targetX, targetY) < 4) {
-                    targetX = x + random.nextInt(32) - 16;
-                    targetY = y + random.nextInt(32) - 16;
+                    targetX = x + random.nextInt(64) - 32;
+                    targetY = y + random.nextInt(64) - 32;
                 } else {
                     x += Main.toSlowMotion((targetX - x) * 0.025);
                     y += Main.toSlowMotion((targetY - y) * 0.025);
@@ -217,3 +170,36 @@ public class Fly extends WorldObject {
         }
     }
 }
+
+/*
+* double minDis = Double.MAX_VALUE;
+            Healable closestEnemy = null;
+            Iterator<GameObject> it;
+            for(it = Main.main.visibleChunkObjects.iterator(); it.hasNext();) {
+                GameObject obj = it.next();
+                if(obj instanceof Healable && !((Healable) obj).isEnemy) {
+                    double distance = Math.hypot((x - obj.x), (y - obj.y));
+                    if(distance <= minDis) {
+                        minDis = distance;
+                        closestEnemy = (Healable) obj;
+                    }
+                }
+            }
+
+            if (minDis < minDistanceToFlyAway && closestEnemy != null) {
+                state = false;
+                angle = angle(closestEnemy.x, closestEnemy.y,
+                        x, y)-180+random.nextInt(90)-45;
+                if(Main.main.isPixelOnScreen((int)x, (int)y)) {
+                    Main.main.flies.forEach(f -> {
+                        if(Fly.distance(x, y, f.x, f.y) < 64) {
+                            flyCounter++;
+                        }
+                    });
+                    if(flyCounter > 0)
+                        flyAway(false);
+                    else flyAway(true);
+                    flyCounter = 0;
+                }
+            } else
+* */
