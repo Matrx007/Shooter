@@ -92,8 +92,8 @@ public class Fly extends WorldObject {
 
         // Body
         points = new double[][]{
-                rotatePoint(x-2, y-3, x, y, direction-90),
-                rotatePoint(x+2, y-3, x, y, direction-90),
+                rotatePoint(x-2, y-2, x, y, direction-90),
+                rotatePoint(x+2, y-2, x, y, direction-90),
                 rotatePoint(x+2, y+6, x, y, direction-90),
                 rotatePoint(x-2, y+6, x, y, direction-90)
         };

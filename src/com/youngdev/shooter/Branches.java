@@ -97,8 +97,8 @@ public class Branches extends WorldObject {
             public void update() {
 //                System.out.println("xx = " + xx);
                 double prevAngle = angle;
-                speedX *= 0.5;
-                speedY *= 0.5;
+                speedX *= 0.9;
+                speedY *= 0.9;
 
                 boolean found = false;
                 boolean move = random.nextBoolean();

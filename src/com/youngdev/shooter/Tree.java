@@ -126,10 +126,10 @@ public class Tree extends WorldObject {
                 break;
         }
 
-        System.out.println("x = " + x);
-        System.out.println("y = " + y);
-        System.out.println("type = " + type);
-        System.out.println("bounds = " + bounds);
+//        System.out.println("x = " + x);
+//        System.out.println("y = " + y);
+//        System.out.println("type = " + type);
+//        System.out.println("bounds = " + bounds);
 
         if(bounds != null) {
             mask = new Mask.Rectangle((double) bounds.x, (double) bounds.y,
@@ -286,11 +286,11 @@ public class Tree extends WorldObject {
         }
     }
 
-    public double calcGaussian(double x) {
+    public static double calcGaussian(double x) {
         return Math.pow(Math.sin(x+ Math.PI/2), 10);
     }
 
-    public double calcGaussian(double x, int pow) {
+    public static double calcGaussian(double x, int pow) {
         return Math.pow(Math.sin(x+ Math.PI/2), pow);
     }
 

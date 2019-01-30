@@ -47,10 +47,18 @@ public class Trash extends WorldObject {
                         UniParticle.calcColorParameter(Main.grassColor.getBlue(), baseColor1.getBlue(), 0.25f)
                 );
 
-                for(int i = 0; i < random.nextInt(4)+10; i++) {
-                    int addX = random.nextInt(30)-15;
-                    int addY = random.nextInt(30)-15;
-                    int size = random.nextInt(8)+14;
+                for(int i = 0; i < random.nextInt(10)+10; i++) {
+
+                    double direction = random.nextDouble() * 360;
+                    double distance = Tree.calcGaussian(random.nextDouble(),
+                            5)*random.nextDouble() * 60;
+
+                    int xx = (int) (this.x+Math.cos(Math.toRadians(direction))*distance);
+                    int yy = (int) (this.y+Math.sin(Math.toRadians(direction))*distance);
+
+//                    int addX = random.nextInt(60)-30;
+//                    int addY = random.nextInt(60)-30;
+                    int size = random.nextInt(16)+32;
 
                     UniParticle.Process colorRandomizer = new UniParticle.Process() {
                         private Color startColor;
@@ -83,7 +91,12 @@ public class Trash extends WorldObject {
                         }
                     };
 
-                    particles.add(new UniParticle(x+addX, y+addY, size, true, baseColor1, colorRandomizer));
+                    particles.add(new UniParticle(xx, yy, size, true, baseColor1, colorRandomizer){
+                        @Override
+                        public void render(Renderer r) {
+                            r.fillCircle(x, y, size, color);
+                        }
+                    });
                 }
                 this.mask = new Mask.Rectangle(x-30, y-30, 60, 60);
                 break;
@@ -96,10 +109,16 @@ public class Trash extends WorldObject {
                         UniParticle.calcColorParameter(Main.grassColor.getBlue(), baseColor2.getBlue(), 0.25f)
                 );
 
-                for(int i = 0; i < random.nextInt(4)+10; i++) {
-                    int addX = random.nextInt(30)-15;
-                    int addY = random.nextInt(30)-15;
-                    int size = random.nextInt(8)+14;
+                for(int i = 0; i < random.nextInt(10)+10; i++) {
+                    double direction = random.nextDouble() * 360;
+                    double distance = Tree.calcGaussian(random.nextDouble(), 5)*random.nextDouble() * 60;
+
+                    int xx = (int) (this.x+Math.cos(Math.toRadians(direction))*distance);
+                    int yy = (int) (this.y+Math.sin(Math.toRadians(direction))*distance);
+
+//                    int addX = random.nextInt(60)-30;
+//                    int addY = random.nextInt(60)-30;
+                    int size = random.nextInt(16)+32;
 
                     UniParticle.Process colorRandomizer = new UniParticle.Process() {
                         private Color startColor;
@@ -131,8 +150,12 @@ public class Trash extends WorldObject {
                             );
                         }
                     };
-
-                    particles.add(new UniParticle(x+addX, y+addY, size, true, baseColor2, colorRandomizer));
+                    particles.add(new UniParticle(xx, yy, size, true, baseColor2, colorRandomizer){
+                        @Override
+                        public void render(Renderer r) {
+                            r.fillCircle(x, y, size, color);
+                        }
+                    });
                 }
                 this.mask = new Mask.Rectangle(x-30, y-30, 60, 60);
                 break;

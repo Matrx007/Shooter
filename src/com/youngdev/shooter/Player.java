@@ -134,8 +134,7 @@ public class Player extends Healable {
 
     @Override
     public void update(Input i) {
-//        System.out.println("cMap.size = "+collisionMap.size());
-        boolean prevInvOpen = inventoryOpen;
+        // ###### MOVEMENT AND SOUNDS ########
         blinkingTimer += 1d/Main.toSlowMotion(1d);
 
         if(blinkingTimer >= blinkingTime) {
@@ -154,8 +153,7 @@ public class Player extends Healable {
             step++;
 
             if(step % 20 == 1) {
-                // TODO: Select sound depending on where
-                // TODO: the player is currently standing
+                // TODO: Play sound depending on player's location
                 if(onPlant) {
                     Main.main.soundManager.playSound("grass"+
                             ((step/20 % 2 == 0) ? 1 : 0), -15f);
@@ -182,28 +180,30 @@ public class Player extends Healable {
         speedX = Math.max(-maxSpeed, Math.min(maxSpeed, speedX));
         speedY = Math.max(-maxSpeed, Math.min(maxSpeed, speedY));
 
-        x += speedX;
-        y += speedY;
-        mask.move(speedX, speedY);
+//        x += speedX;
+//        y += speedY;
+        cm.move(speedX, speedY);
+//        mask.move(speedX, speedY);
 
-//         -- HOR / X --
-//        if(collisionMap.collisionWithExcept(mask, aabbComponent)) {
-//            while(!collisionMap.collisionWithExcept(mask.shift(-lastMoveX, 0),
-//                    aabbComponent)) {
-//                x -= lastMoveX;
-//                mask.move(lastMoveX, 0);
-//            }
-//        }
-//
-//         -- VER / Y --
-//        if(collisionMap.collisionWithExcept(mask, aabbComponent)) {
-//            while(!collisionMap.collisionWithExcept(mask.shift(0, -lastMoveY),
-//                    aabbComponent)) {
-//                y -= lastMoveY;
-//                mask.move(0, lastMoveY);
-//            }
-//        }
+        /*// -- HOR / X --
+        if(collisionMap.collisionWithExcept(mask, aabbComponent)) {
+            while(!collisionMap.collisionWithExcept(mask.shift(-lastMoveX, 0),
+                    aabbComponent)) {
+                x -= lastMoveX;
+                mask.move(lastMoveX, 0);
+            }
+        }
 
+        // -- VER / Y --
+        if(collisionMap.collisionWithExcept(mask, aabbComponent)) {
+            while(!collisionMap.collisionWithExcept(mask.shift(0, -lastMoveY),
+                    aabbComponent)) {
+                y -= lastMoveY;
+                mask.move(0, lastMoveY);
+            }
+        }*/
+
+        // ###### PARTICLES ######
 
         this.xx = (int) x;
         this.yy = (int) y;
@@ -224,175 +224,14 @@ public class Player extends Healable {
         particles.forEach(UniParticle::update);
         particles.removeIf(particle -> particle.dead);
 
-        if(i.isButtonDown(1) && ammo > 0 && autoReloadTimer == 0) {
-            ammo--;
-//            System.out.println("Shot");
-            int addX = (int)(Math.cos(Math.toRadians(Fly.angle(x, y, i.getRelativeMouseX(), i.getRelativeMouseY())-180))*10d);
-            int addY = (int)(Math.sin(Math.toRadians(Fly.angle(x, y, i.getRelativeMouseX(), i.getRelativeMouseY())-180))*10d);
-
-            int dir = (int) Fly.angle(xx+addX, yy+addY, i.getRelativeMouseX(), i.getRelativeMouseY());
-
-            double knockBackX = Math.cos(Math.toRadians(dir)) * 4d;
-            double knockBackY = Math.sin(Math.toRadians(dir)) * 4d;
-
-            cm.move(knockBackX, knockBackY);
-
-            Main.main.camera.cX -= knockBackX;
-            Main.main.camera.cY -= knockBackY;
-
-            Arrow arrow = new Arrow(xx+addX, yy+addY, dir-180);
-            arrow.shotByFriendly = !isEnemy;
-            arrow.addX = speedX;
-            arrow.addY = speedY;
-            Main.main.entities.add(arrow);
-            Main.main.findOnScreenObjects();
-            Main.main.camera.shake(0.5f);
-//            Main.main.camera.bluishEffect = 1f;
-        }
-
-        boolean arrowNear = false;
-        if (Main.main.entities.size() > 0) {
-            for(GameObject entity : Main.main.entities) {
-                if(entity instanceof Arrow) {
-                    if(!((Arrow) entity).shotByFriendly)
-                        if(Fly.distance(x, y, entity.x, entity.y) < 80) {
-                            arrowNear = true;
-                            break;
-                        }
-                }
-            }
-        }
-
-        boolean enemyNear = false;
-        if (Main.main.entities.size() > 0) {
-            for(GameObject obj : Main.main.entities) {
-                if(obj instanceof Healable) {
-                    if(((Healable) obj).isEnemy)
-                        if(Fly.distance(x, y, obj.x, obj.y) < 50) {
-                            enemyNear = true;
-                            break;
-                        }
-                }
-            }
-        }
-
-        if(arrowNear || enemyNear || inventoryOpen) {
-            Main.slowMotionSpeed -= 0.05f;
-            Main.main.camera.bluishEffect += 0.05f;
-        } else {
-//            System.out.println("SlMoSp: "+Main.slowMotionSpeed);
-//            System.out.println("BlFx: "+Main.main.camera.bluishEffect);
-            Main.slowMotionSpeed += 0.05f;
-            Main.main.camera.bluishEffect -= 0.05f;
-        }
-
         Main.slowMotionSpeed = (float)AdvancedMath.setRange(Main.slowMotionSpeed, 0.4d, 1d);
         Main.main.camera.bluishEffect = (float)AdvancedMath.setRange(Main.main.camera.bluishEffect, 0d, 0.5d);
-
-        // HERE: Clip overlay
-        coinOverlayAlpha = Math.max(0, coinOverlayAlpha-Main.toSlowMotion(2));
-        coinOverlayX += (lastCoinX - coinOverlayX) * 0.1d;
-        coinOverlayY += (lastCoinY - coinOverlayY) * 0.1d;
-        clipOverlayOpen = i.isKey(KeyEvent.VK_V) || i.isButton(3);
-        if(clipOverlayOpen) {
-            clipOverlayRotationTarget = 110;
-            clipOverlayAlpha += 24;
-        } else {
-            clipOverlayRotationTarget = 1;
-            clipOverlayAlpha -= 24;
-        }
-        clipOverlayRotation += (clipOverlayRotationTarget - clipOverlayRotation) * 0.1d;
-        clipOverlayAlpha = AdvancedMath.setRange(clipOverlayAlpha, 0, 255);
-
-        // HERE: Player stats overlay
-        boolean statsOverlayOpen = i.isButton(3);
-        if(statsOverlayOpen) {
-            statsOverlayRotationTarget = 0;
-            statsOverlayAlpha += 24;
-            autoReloadTargetY = statsReloadTargetHeight;
-        } else {
-            autoReloadTargetY = reloadTargetHeight;
-            statsOverlayRotationTarget = -90;
-            statsOverlayAlpha -= 24;
-        }
-        statsOverlayRotation += (statsOverlayRotationTarget - statsOverlayRotation) * 0.1d;
-        statsOverlayAlpha = AdvancedMath.setRange(statsOverlayAlpha, 0, 160);
-
-        autoReloadY += (autoReloadTargetY - autoReloadY) * 0.1d;
-
-        boolean rPressed = i.isKey(KeyEvent.VK_R);
-
-        if(!rPressed) {
-            waitingForRelease = false;
-
-            if(statsOverlayOpen && ammo > autoReloadMaximumAmmo) {
-                autoReloadBlinkingTimer = 0;
-                autoReloadTimer = 0;
-            }
-        }
-
-        if(clip > 0 && ((rPressed && !waitingForRelease) || statsOverlayOpen)) {
-            // HERE: Reload
-            autoReloadBlinkingTimer+=Main.toSlowMotion(1d);
-            if(autoReloadBlinkingTimer >= autoReloadBlinkingTime) {
-                autoReloadBlinkingTimer = 0;
-            }
-            if(rPressed || (ammo <= autoReloadMaximumAmmo)) {
-                autoReloadTimer+=Main.toSlowMotion(1d);
-
-                if(autoReloadTimer >= autoReloadTime) {
-                    clip--;
-                    ammo = maxAmmo;
-                    autoReloadTimer = 0;
-                    autoReloadBlinkingTimer = 0;
-                    waitingForRelease = true;
-                }
-            }
-        } else {
-            autoReloadBlinkingTimer = 0;
-            autoReloadTimer = 0;
-        }
 
         this.mask.x = x;
         this.mask.y = y;
 
         this.aabbComponent.area.x = x;
         this.aabbComponent.area.y = y;
-
-        /*
-        // ---- Shadow caster V 0.1 ----
-        rays.clear();
-        long timeStart = System.nanoTime();
-        double rayAccuracy = 1d/ raysAccuracy;
-        double maxDistance = core.width;
-        long averageTime = 0;
-        for(double j = 0; j < 360; j+=rayAccuracy) {
-            double addX = Math.cos(Math.toRadians(j));
-            double addY = Math.sin(Math.toRadians(j));
-            double xx = x;
-            double yy = y;
-            double distance = 0;
-
-            while(distance < maxDistance) {
-                distance = Fly.distance(x, y, xx, yy);
-                long timeStart2 = System.nanoTime();
-                if(Main.collisionMap.collisionAt((int)xx, (int)yy)) {
-                    break;
-                }
-                long timeEnd2 = System.nanoTime();
-                averageTime += timeEnd2-timeStart2;
-                xx += addX;
-                yy += addY;
-            }
-
-            rays.add(new Vector4((int)(xx+addX), (int)(yy+addY), (int)(xx+addX*8), (int)(yy+addY*8)));
-        }
-        long timeEnd = System.nanoTime();
-        System.out.println("Checking rays took an average of "+String.valueOf(averageTime/(360d/rayAccuracy))+"ns");
-        System.out.println("Checking rays took a total of "+String.valueOf(averageTime)+"ns");
-        System.out.println("Calculating rays took a "+String.valueOf(timeEnd-timeStart)+"ns");*/
-
-
     }
 
     public void castRays() {

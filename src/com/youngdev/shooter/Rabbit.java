@@ -72,39 +72,18 @@ public class Rabbit extends Healable {
         direction += Main.toSlowMotion((directionTarget - direction) * 0.25d);
         speed += Main.toSlowMotion((speedTarget - speed) * 0.1d);
 
-        if(collideWithOthers) {
-            unStucking = Main.collisionMap.collisionWithExcept(this.mask, aabbComponent);
-            if (unStucking) {
-                double spd = Math.cos(Math.toRadians(step))*speed;
-                double amountX;
-                double amountY;
-                if(spd > 0) {
-                    amountX = Math.cos(Math.toRadians(direction)) * spd;
-                    amountY = Math.sin(Math.toRadians(direction)) * spd;
-                } else {
-                    amountX = 0;
-                    amountY = 0;
-                }
-                x += amountX;
-                y += amountY;
-                this.mask.move(amountX, amountY);
-//            aabbComponent.area = this.mask;
-            } else {
-//            System.out.println("direction = " + direction);
-//            System.out.println("directionTarget = " + directionTarget);
-//            aabbComponent.area = this.mask;
-                cm.move(Math.cos(Math.toRadians(direction)) * Main.toSlowMotion(this.speed),
-                        Math.sin(Math.toRadians(direction)) * Main.toSlowMotion(this.speed));
-            }
-        } else {
-            /*cm.move(Math.cos(Math.toRadians(direction)) * Main.toSlowMotion(
-                    Math.abs(Math.pow(Math.cos(Math.toRadians(step)), 1))*speed),
-                    Math.sin(Math.toRadians(direction)) * Main.toSlowMotion(
-                            Math.abs(Math.pow(Math.cos(Math.toRadians(step)), 1))*speed));*/
-            cm.move(Math.cos(Math.toRadians(direction)) * Main.toSlowMotion(
-                    (1-(step%150)/150d)*speed*2d),
-                    Math.sin(Math.toRadians(direction)) * Main.toSlowMotion(
-                            (1-(step%150)/150d)*speed*2d));
+        double prevX = x;
+        double prevY = y;
+        cm.move(Math.cos(Math.toRadians(direction)) * Main.toSlowMotion(
+                (1-(step%150)/150d)*speed*2d),
+                Math.sin(Math.toRadians(direction)) * Main.toSlowMotion(
+                        (1-(step%150)/150d)*speed*2d));
+        if(speed > 0 && (x == prevX && y == prevY)) {
+            cm.unstuck();
+            int k = Main.collisionMap.
+                    collisionWithWhoExcept(mask, aabbComponent).size();
+            if(k > 0)
+                System.out.println("Collisions: "+k);
         }
     }
 

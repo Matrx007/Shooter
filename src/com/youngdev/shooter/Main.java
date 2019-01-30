@@ -69,7 +69,6 @@ public class Main extends Game {
     public Player player;
     public List<GameObject> addEntities;
     public List<GameObject> entities;
-    protected List<GameObject> visibleChunkObjects;
     List<GameObject> coins;
     private List<GameObject> structuralBlocks,visibleChunkObjectsTemp;
     public List<Fly> flies;
@@ -87,7 +86,11 @@ public class Main extends Game {
         new Main();
     }
 
+    List<GameObject> visibleChunkObjects;
+    List<WorldObject> visibleChunkEntities;
     private Map<Point, ArrayList<GameObject>> chunks;
+    private Map<Point, HashSet<WorldObject>> chunkEntities;
+    private ArrayDeque<MoveTo> moveChunkEntities;
 
     public Main() {
         main = this;
@@ -158,7 +161,10 @@ public class Main extends Game {
         cursor = new Cursor();
         chunks = new HashMap<>();
         usesChunkRenderer = true;
+        moveChunkEntities = new ArrayDeque<>();
+        chunkEntities = new HashMap<>();
         visibleChunkObjects = Collections.synchronizedList(new ArrayList<>());
+        visibleChunkEntities = Collections.synchronizedList(new ArrayList<>());
         visibleChunkObjectsTemp = Collections.synchronizedList(new ArrayList<>());
         flies = Collections.synchronizedList(new ArrayList<>());
         structuralBlocks = Collections.synchronizedList(new ArrayList<>());
@@ -245,6 +251,12 @@ public class Main extends Game {
         e.run();
     }
 
+    public void move(WorldObject obj, int fromX, int fromY,
+                     int toX, int toY) {
+        moveChunkEntities.offerLast(new MoveTo(obj,
+                fromX, fromY, toX, toY));
+    }
+
     private void loadSounds() {
         soundManager.addClip("sounds/backgroundMusic.wav", "startMenuMusic");
         soundManager.addClip("sounds/noiseLow.wav", "noise");
@@ -273,6 +285,7 @@ public class Main extends Game {
 
     private void generateChunk(int x, int y) {
         ArrayList<GameObject> chunk = new ArrayList<>();
+        HashSet<WorldObject> chunkEntities = new HashSet<>();
 
         Random random = new Random();
 
@@ -311,7 +324,7 @@ public class Main extends Game {
         }
 
         if(random.nextInt(8)==1) {
-            addEntities.add(new FlyGroup(minX+chunkSize/2,
+            chunkEntities.add(new FlyGroup(minX+chunkSize/2,
                     minY+chunkSize/2,
                     random.nextInt(15)+10));
             /*int xx = random.nextInt(chunkSize);
@@ -327,7 +340,7 @@ public class Main extends Game {
         }
 
         if(random.nextInt(4)==1) {
-            addEntities.add(new Rabbit(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY));
+            chunkEntities.add(new Rabbit(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY));
         }
 
         /*if(random.nextInt(7)==3) {
@@ -350,10 +363,15 @@ public class Main extends Game {
                     Tree.TYPE_SAVANNA : Tree.TYPE_OAK));
         }
 
-        getChunkArray(x, y).addAll(chunk);
+        Point loc = new Point(x, y);
 
-//        if(isOnScreen(x, y, 2))
-//            findOnScreenObjects();
+        if(!chunks.containsKey(loc)) {
+            chunks.put(loc, chunk);
+        } else getChunkArray(x, y).addAll(chunk);
+
+        if(!this.chunkEntities.containsKey(loc)) {
+            this.chunkEntities.put(loc, chunkEntities);
+        } else this.chunkEntities.get(loc).addAll(chunkEntities);
     }
 
     public ArrayList<GameObject> getChunkArray(int x, int y) {
@@ -433,9 +451,6 @@ public class Main extends Game {
     }
 
     void findOnScreenObjects() {
-//        findOnScreenCalled = true;
-//        if(findOnScreenBlocked) return;
-
         int chunkXTopLeft = (int)Math.floor(camera.cX/(double)chunkSize);
         int chunkYTopLeft = (int)Math.floor(camera.cY/(double)chunkSize);
         int chunkXBottomRight = (int)Math.ceil((e.width+camera.cX)/(double)chunkSize);
@@ -446,26 +461,7 @@ public class Main extends Game {
         ArrayList<GameObject> addQueue = new ArrayList<>();
         if(!startMenuMode) {
             addQueue.add(player);
-//            addQueue.add(player.shadowRenderer);
         }
-
-//        System.out.println(chunkXTopLeft);
-//        System.out.println(chunkYTopLeft);
-
-        /*// HRE: Add chunks that are inside screen to visibleChunkObjects list
-        for(int xx = chunkXTopLeft; xx <= chunkXBottomRight; xx++) {
-            for(int yy = chunkYTopLeft; yy <= chunkYBottomRight; yy++) {
-                for(GameObject obj : getChunkArray(xx, yy)) {
-                    addQueue.add(obj);
-                    if(obj.aabbComponent != null) {
-                        collisionMap.add(obj.aabbComponent);
-                    }
-                }
-//                visibleChunkObjects.addAll(getChunkArray(xx, yy));
-            }
-        }*/
-
-//        System.out.println("Now [1]: "+addQueue.size());
 
         // HERE: Add additional ones that are partly on screen
         Mask.Rectangle visibleAreaMask = new Mask.Rectangle(
@@ -475,11 +471,6 @@ public class Main extends Game {
                 e.getRenderer().getCamY()+e.height);
         for(int xx = chunkXTopLeft-4; xx < chunkXBottomRight+4; xx++) {
             for(int yy = chunkYTopLeft-4; yy < chunkYBottomRight+4; yy++) {
-//                if(xx >= chunkXTopLeft && yy >= chunkYTopLeft &&
-//                        xx <= chunkXBottomRight && yy <= chunkYBottomRight) {
-//                    continue;
-//                }
-
                 ArrayList<GameObject> chunk = getChunkArray(xx, yy);
                 GameObject obj;
                 for(int j = chunk.size()-1; j >= 0; j--) {
@@ -493,34 +484,23 @@ public class Main extends Game {
                 }
             }
         }
-//        System.out.println("Now [2]: "+addQueue.size());
-
-
-        int camX = e.getRenderer().getCamX();
-        int camY = e.getRenderer().getCamY();
-        // HERE: Also add entities
-        Iterator<GameObject> iterator = entities.iterator();
-        for(int j = entities.size()-1; j >= 0; j--) {
-            GameObject obj = entities.get(j);
-            Point chunkLoc = getChunkLocation((int)obj.x, (int)obj.y);
-            if(isOnScreen(chunkLoc.x, chunkLoc.y, 2)) {
-                addQueue.add(obj);
-
-                if(obj instanceof Healable){
-                    if(((Healable) obj).hasCollision) {
-                        collisionMap.add(obj.aabbComponent);
+        for(int xx = chunkXTopLeft-4; xx < chunkXBottomRight+4; xx++) {
+            for(int yy = chunkYTopLeft-4; yy < chunkYBottomRight+4; yy++) {
+                HashSet<WorldObject> chunk = chunkEntities.
+                        get(new Point(xx, yy));
+                chunk.forEach(obj -> {
+                    if((obj.mask == null && isPixelOnScreen(
+                            (int)obj.x, (int)obj.y, 4)) ||
+                            visibleAreaMask.isColliding(obj.mask)) {
+                        addQueue.add(obj);
                     }
-                }
+                });
             }
         }
-//        System.out.println("Now [3]: "+addQueue.size());
 
-        // HERE: Add coins
-        Iterator<GameObject> iterator1 = coins.iterator();
-        while(iterator1.hasNext()) {
-            GameObject obj = iterator1.next();
-            Point chunkLoc = getChunkLocation((int)obj.x, (int)obj.y);
-            if(isOnScreen(chunkLoc.x, chunkLoc.y, 1)) {
+        for (GameObject obj : coins) {
+            Point chunkLoc = getChunkLocation((int) obj.x, (int) obj.y);
+            if (isOnScreen(chunkLoc.x, chunkLoc.y, 1)) {
                 addQueue.add(obj);
             }
         }
@@ -564,7 +544,6 @@ public class Main extends Game {
         }
 
         if(startMenuMode) {
-            boolean found = false;
             camera.bluishEffect = 0f;
             int x = core.getInput().getMouseX();
             int y = core.getInput().getMouseY();
@@ -594,7 +573,6 @@ public class Main extends Game {
                     }
                     startMenuButtons_prevHover[k] = true;
                 } else {
-                    inside = false;
                     startMenuButtons_prevHover[k] = false;
                 }
 //                cursor.visible = !found;
@@ -611,7 +589,7 @@ public class Main extends Game {
                         }
                     }
                 }
-                System.out.println("size = " + buttonHoverVectors[k].size());
+//                System.out.println("size = " + buttonHoverVectors[k].size());
             }
 
             startMenuButtonParticles.removeIf(p -> {
@@ -624,8 +602,18 @@ public class Main extends Game {
             });
         }
 
-        entities.addAll(addEntities);
-        addEntities.clear();
+        while(!moveChunkEntities.isEmpty()) {
+            MoveTo move = moveChunkEntities.pollFirst();
+            if(move != null) {
+                chunkEntities.get(new Point(move.fromX, move.fromY)).
+                        remove(move.targetObject);
+                chunkEntities.get(new Point(move.toX, move.toY)).
+                        add(move.targetObject);
+            }
+        }
+
+//        entities.addAll(addEntities);
+//        addEntities.clear();
 
         findOnScreenBlocked = true;
 
@@ -637,7 +625,7 @@ public class Main extends Game {
             return o.dead;
         });
 
-        Iterator<Fly> it = flies.iterator();
+        /*Iterator<Fly> it = flies.iterator();
         while(it.hasNext()) {
             Fly fly = it.next();
 
@@ -650,9 +638,9 @@ public class Main extends Game {
             } else {
                 fly.update(core.getInput());
             }
-        }
+        }*/
 
-        Iterator<GameObject> it2 = entities.iterator();
+        /*Iterator<GameObject> it2 = entities.iterator();
         while(it2.hasNext()) {
             GameObject entity = it2.next();
             entity.dead = entity.dead ||
@@ -663,7 +651,7 @@ public class Main extends Game {
             } else {
                 entity.update(core.getInput());
             }
-        }
+        }*/
 
         Iterator<Player> it3 = playerEntities.iterator();
         while(it3.hasNext()) {
@@ -680,10 +668,21 @@ public class Main extends Game {
         Iterator<GameObject> it4;
         for(it4 = Main.main.visibleChunkObjects.iterator(); it4.hasNext();) {
             GameObject obj = it4.next();
-            if(obj instanceof Bush || obj instanceof Plant || obj instanceof Trash
-                    || obj instanceof Tree || obj instanceof Branches) {
-                obj.update(core.getInput());
+            if(obj == player) continue;
+            if(obj instanceof WorldObject) {
+                if (!(obj instanceof Tree) && !(obj instanceof Rocks)) {
+                    obj.update(core.getInput());
+                }
             }
+        }
+        Iterator<WorldObject> it5;
+        for(it5 = Main.main.visibleChunkEntities.iterator(); it5.hasNext();) {
+            WorldObject obj = it5.next();
+            if(obj == player) continue;
+            double prevX = obj.x;
+            double prevY = obj.y;
+            obj.update(core.getInput());
+            obj.checkLocation(prevX, prevY);
         }
         cursor.update(i);
 
@@ -893,6 +892,10 @@ public class Main extends Game {
             }
         }
         startMenuModePrev = startMenuMode;
+
+        if(entities.size() > 0) {
+            System.out.println(entities.size());
+        }
     }
 
     public static int toSlowMotion(int amount) {
@@ -909,55 +912,9 @@ public class Main extends Game {
 
         r.absolute();
 
-        Filter grayScale = (newC, oldC) -> {
-            int cr = newC.getRed();
-            int cg = newC.getGreen();
-            int cb = newC.getBlue();
-
-            int grayScaleColor = (int) (((double) (cr + cg + cb)) / 3d);
-
-            cr = grayScaleColor;
-            cg = grayScaleColor;
-            cb = grayScaleColor;
-
-            return new Color(cr, cg, cb);
-        };
-
         Filter passThrough = (newC, oldC) -> newC;
 
-        Filter slowMotionOverlay = (newC, oldC) -> {
-            float amount = camera.bluishEffect;
-            double cr = newC.getRed() * (1 - 0.45 * amount);
-            double cg = newC.getGreen() * (1 - 0.45 * amount);
-            double cb = newC.getBlue() * (1 - 0.45 * amount);
-
-            double grayScaleColor = (cr + cg + cb) / 3d;
-
-            cr = cr * (1 - amount) + grayScaleColor * amount;
-            cg = cg * (1 - amount) + grayScaleColor * amount;
-            cb = cb * (1 - (amount * 0.25)) + grayScaleColor * (amount * 0.25);
-
-            cg = Math.max(0, Math.min(255, cg));
-            cr = Math.max(0, Math.min(255, cr * (1d+0.25d*amount)));
-            cb = Math.max(0, Math.min(255, cb));
-
-            return new Color((int) cr, (int) cg, (int) cb, newC.getAlpha());
-        };
-
         r.setFilter(0, passThrough);
-
-        /*r.setFilter(0, (newC, oldC) -> {
-            newC = new Color(64, 64, 64, 64);
-
-            return new Color(
-                    oldC.getRed(), oldC.getGreen(), oldC.getBlue()
-//                255,
-//                UniParticle.calcColorParameter(oldC.getRed(), newC.getRed(), newC.getAlpha()/255f),
-//                UniParticle.calcColorParameter(oldC.getGreen(), newC.getGreen(), newC.getAlpha()/255f),
-//                UniParticle.calcColorParameter(oldC.getBlue(), newC.getBlue(), newC.getAlpha()/255f)
-            );
-
-        });*/
 
         r.setClip(0, 0, e.width, e.height);
 
@@ -967,133 +924,30 @@ public class Main extends Game {
         if (showDebugInfo)
             r.fillRectangle(hoverChunkX * chunkSize, hoverChunkY * chunkSize, chunkSize, chunkSize, new Color(40, 100, 70));
 
+        // ╔════════════════════════════╗
+        // ║ R E N D E R    C H U N K S ║
+        // ╚════════════════════════════╝
         if (usesChunkRenderer) {
             // HERE: Render only visible chunks
-
-            Iterator<GameObject> it;
-            for (it = Main.main.visibleChunkObjects.iterator(); it.hasNext(); ) {
-                it.next().render(r);
+            Iterator<GameObject> it1;
+            for (it1 = Main.main.visibleChunkObjects.iterator(); it1.hasNext(); ) {
+                it1.next().render(r);
             }
-//            visibleChunkObjects.forEach(obj -> obj.render(r));
-//            flies.forEach(f -> {
-//                if(isPixelOnScreen((int)f.xx, (int)f.yy, 1)) {
-//                    f.render(r);
-//                }
-//            });
         } else {
             // HERE: Render all chunks, temporally
             chunks.forEach((loc, chunk) -> chunk.forEach(obj -> obj.render(r)));
 //            flies.forEach(f -> f.render(r));
         }
 
-        // HERE: Render nearby bullet warnings
-        Filter backup = r.getFilter(0);
-        r.removeFilter(0);
-        if (player.blinkingON) {
-            Iterator<GameObject> it;
-            for (it = Main.main.visibleChunkObjects.iterator(); it.hasNext(); ) {
-                GameObject obj = it.next();
-                if (obj instanceof Arrow)
-                    if (!((Arrow) obj).shotByFriendly)
-                        if (Fly.distance(obj.x, obj.y, player.x, player.y) < 160) {
-                            r.drawRectangle(obj.x - 8, obj.y - 8, 16, 16, Color.red);
-                        }
-            }
-        }
-        r.setFilter(0, backup);
-
         r.setFont(new Font("Press Start Regular", Font.BOLD, 16));
         r.drawText(String.valueOf((int) player.money), player.coinOverlayX, player.coinOverlayY - 32, 16,
                 Alignment.MIDDLE_CENTER, new Color(40, 250, 140, (int) player.coinOverlayAlpha));
 
-
-//        double mouseAngle = Fly.angle(player.x, player.y, e.getInput().getRelativeMouseX(), e.getInput().getRelativeMouseY());
-        backup = r.getFilter(0);
-        r.removeFilter(0);
-        if (player.clipOverlayAlpha != 0) {
-            double xx = e.getInput().getRelativeMouseX();
-            double yy = e.getInput().getRelativeMouseY();
-            double step1 = 360d / 10d;
-            double addAngle = player.clipOverlayRotation;
-            for (int i = 0; i < player.clip; i++) {
-                double angle = step1 * i + addAngle;
-//            System.out.println("XX: "+xx);
-//            System.out.println("YY: "+yy);
-//            System.out.println("Angle: "+angle);
-                double sizeOuter = 24;
-                double sizeInner = 12;
-                double x1 = xx + Math.cos(Math.toRadians(angle + 3)) * sizeOuter;
-                double y1 = yy + Math.sin(Math.toRadians(angle + 3)) * sizeOuter;
-                double x2 = xx + Math.cos(Math.toRadians(angle + step1 - 3)) * sizeOuter;
-                double y2 = yy + Math.sin(Math.toRadians(angle + step1 - 3)) * sizeOuter;
-                double x3 = xx + Math.cos(Math.toRadians(angle + step1 - 3)) * sizeInner;
-                double y3 = yy + Math.sin(Math.toRadians(angle + step1 - 3)) * sizeInner;
-                double x4 = xx + Math.cos(Math.toRadians(angle + 3)) * sizeInner;
-                double y4 = yy + Math.sin(Math.toRadians(angle + 3)) * sizeInner;
-
-                r.fillPolygon(new double[]{x1, x2, x3, x4}, new double[]{y1, y2, y3, y4}, new Color(64, 64, 64, (int) player.clipOverlayAlpha));
-            }
-            double step2 = 360d / player.maxAmmo;
-            for (int i = 0; i < player.ammo; i++) {
-                double angle = step2 * i + addAngle / 1.5d;
-//            System.out.println("XX: "+xx);
-//            System.out.println("YY: "+yy);
-//            System.out.println("Angle: "+angle);
-                double sizeOuter = 32;
-                double sizeInner = 28;
-                double x1 = xx + Math.cos(Math.toRadians(angle + 3)) * sizeInner;
-                double y1 = yy + Math.sin(Math.toRadians(angle + 3)) * sizeInner;
-                double x2 = xx + Math.cos(Math.toRadians(angle + 3)) * sizeOuter;
-                double y2 = yy + Math.sin(Math.toRadians(angle + 3)) * sizeOuter;
-
-                r.drawLineWidth(x1, y1, x2, y2, 1, new Color(80, 80, 64, (int) player.clipOverlayAlpha));
-            }
-        }
-
         r.absolute();
 
-        int xx = e.getInput().getMouseX();
-        int yy = e.getInput().getMouseY();
-        if (player.statsOverlayAlpha > 0) {
-            int radius = 40;
-            double angle = player.health / player.healthMax * 359d;
-
-            r.setColor(new Color(200, 30, 90, (int) player.statsOverlayAlpha));
-
-            Stroke previous = ((Graphics2D) r.getG()).getStroke();
-            ((Graphics2D) r.getG()).setStroke(new BasicStroke(12f));
-
-            r.getG().drawArc(xx - radius - r.getCamX(), yy - radius - r.getCamY(), radius * 2, radius * 2,
-                    90 - (int) player.statsOverlayRotation, (int) angle);
-
-
-            r.setColor(new Color(60, 200, 90, (int) player.statsOverlayAlpha));
-            radius = 56;
-            angle = player.hunger / player.hungerMax * 359d;
-            r.getG().drawArc(xx - radius - r.getCamX(), yy - radius - r.getCamY(), radius * 2, radius * 2,
-                    90 - (int) player.statsOverlayRotation, (int) angle);
-
-            ((Graphics2D) r.getG()).setStroke(previous);
-        }
-
-        if (player.autoReloadTimer != 0) {
-            double w = player.autoReloadTimer / player.autoReloadTime * 62d;
-            float alpha = (float) player.autoReloadBlinkingTimer /
-                    (float) player.autoReloadBlinkingTime;
-            Color color = new Color(
-                    calcColorParameter(128, 190, alpha),
-                    calcColorParameter(128, 210, alpha),
-                    calcColorParameter(128, 40, alpha)
-            );
-
-            r.fillRectangle(xx - 32, yy + player.autoReloadY, 64, 8,
-                    Color.gray);
-
-            r.fillRectangle(xx - 32 + 1, yy + player.autoReloadY + 1, (int) w, 6, color);
-        }
-
-        r.setFilter(0, backup);
-
+        // ╔═════════════════════════════════════╗
+        // ║ R E N D E R    D E B U G    I N F O ║
+        // ╚═════════════════════════════════════╝
         if (showDebugInfo) {
             int addY = 16;
             int y = 8;
@@ -1128,6 +982,10 @@ public class Main extends Game {
         r.relative();
         r.clearFilters();
 
+
+        // ╔═══════════════════════════════════╗
+        // ║ R E N D E R    M A I N    M E N U ║
+        // ╚═══════════════════════════════════╝
         if(startMenuMode) {
             r.absolute();
             r.drawImage(0, 0, gameLogo);
@@ -1157,5 +1015,18 @@ public class Main extends Game {
 
         r.relative();
         cursor.render(r);
+    }
+
+    private class MoveTo {
+        public WorldObject targetObject;
+        public int fromX, fromY, toX, toY;
+
+        public MoveTo(WorldObject targetObject, int fromX, int fromY, int toX, int toY) {
+            this.targetObject = targetObject;
+            this.fromX = fromX;
+            this.fromY = fromY;
+            this.toX = toX;
+            this.toY = toY;
+        }
     }
 }

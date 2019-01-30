@@ -29,50 +29,38 @@ public class Terrain extends WorldObject {
         pieces = new ArrayList<>();
         int range = 48;
         int smallestX=Integer.MAX_VALUE, smallestY=Integer.MAX_VALUE, largestX=Integer.MIN_VALUE, largestY=Integer.MIN_VALUE;
-        switch (type) {
-            case TYPE_DIRT_PATCH:
-                range = random.nextInt(32)+48;
-                int num = random.nextInt(24)+24;
-                for(int i = 0; i < num; i++) {
-                    int angle = random.nextInt(359);
-                    int distance = (int)(Math.abs(random.nextGaussian())*range);
-                    int xx = x+(int)(Math.cos(Math.toRadians(angle))*distance);
-                    int yy = y+(int)(Math.sin(Math.toRadians(angle))*distance);
+        range = random.nextInt(32)+48;
+        int num = random.nextInt(64)+16;
+        for(int i = 0; i < num; i++) {
+            int angle = random.nextInt(359);
+            int distance = (int)(Math.abs(random.nextGaussian())*range);
+            int xx = x+(int)(Math.cos(Math.toRadians(angle))*distance);
+            int yy = y+(int)(Math.sin(Math.toRadians(angle))*distance);
 //                    int xx = x-random.nextInt(range*2)+range;
 //                    int yy = y-random.nextInt(range*2)+range;
-                    int size = random.nextInt(6)+5;
-                    int tone = random.nextInt(20);
-                    Color baseColor = new Color(60, 120, 90);
-                    Color color = new Color(baseColor.getRed()+tone,
-                            baseColor.getGreen()+tone,
-                            baseColor.getBlue()+tone);
-                    pieces.add(new Patch(xx, yy, size, color));
-                    smallestX = Math.min(smallestX, xx-size/2);
-                    smallestY = Math.min(smallestY, yy-size/2);
-                    largestX = Math.max(largestX, (int)Math.ceil(xx+size/2d));
-                    largestY = Math.max(largestY, (int)Math.ceil(yy+size/2d));
-                }
-                break;
-            case TYPE_SMALL_ROCKS:
-                range = random.nextInt(32)+48;
-                num = random.nextInt(48)+24;
-                for(int i = 0; i < num; i++) {
-                    int xx = x-random.nextInt(range*2)+range;
-                    int yy = y-random.nextInt(range*2)+range;
-                    int size = random.nextInt(3)+2;
-                    int tone = random.nextInt(20);
-                    Color baseColor = new Color(80, 80, 80);
-                    Color color = new Color(baseColor.getRed()+tone,
-                            baseColor.getGreen()+tone,
-                            baseColor.getBlue()+tone);
-                    pieces.add(new Patch(xx, yy, size, color));
-                    pieces.add(new Patch(xx, yy, size, color));
-                    smallestX = Math.min(smallestX, xx-size/2);
-                    smallestY = Math.min(smallestY, yy-size/2);
-                    largestX = Math.max(largestX, (int)Math.ceil(xx+size/2d));
-                    largestY = Math.max(largestY, (int)Math.ceil(yy+size/2d));
-                }
-                break;
+            int size;
+            if(random.nextBoolean()) {
+                size = random.nextInt(6) + 5;
+                int tone = random.nextInt(5) + 3;
+                Color baseColor = new Color(60, 120, 90);
+                Color color = new Color(baseColor.getRed() + tone,
+                        baseColor.getGreen() + tone,
+                        baseColor.getBlue() + tone);
+                pieces.add(new Patch(xx, yy, size, color));
+            } else {
+                size = random.nextInt(4)+2;
+                int tone = random.nextInt(20);
+                Color baseColor = new Color(80, 80, 80);
+                Color color = new Color(baseColor.getRed()+tone,
+                        baseColor.getGreen()+tone,
+                        baseColor.getBlue()+tone);
+                pieces.add(new Patch(xx, yy, size, color));
+                pieces.add(new Patch(xx, yy, size, color));
+            }
+            smallestX = Math.min(smallestX, xx - size / 2);
+            smallestY = Math.min(smallestY, yy - size / 2);
+            largestX = Math.max(largestX, (int) Math.ceil(xx + size / 2d));
+            largestY = Math.max(largestY, (int) Math.ceil(yy + size / 2d));
         }
 
         mask = new Mask.Rectangle(smallestX, smallestY, largestX-smallestX, largestY-smallestY);

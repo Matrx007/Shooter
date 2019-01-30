@@ -16,4 +16,14 @@ public abstract class WorldObject extends GameObject {
         this.index = index;
         this.type = type * 1024 + random.nextInt(1024);
     }
+
+    void checkLocation(double prevX, double prevY) {
+        int x = (int)this.x / Main.chunkSize;
+        int y = (int)this.y / Main.chunkSize;
+        int prvX = (int)prevX / Main.chunkSize;
+        int prvY = (int)prevY / Main.chunkSize;
+        if(x != prvX || y != prvY) {
+            Main.main.move(this, prvX, prvY, x, y);
+        }
+    }
 }

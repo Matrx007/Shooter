@@ -2,7 +2,9 @@ package com.youngdev.shooter;
 
 import com.engine.libs.game.GameObject;
 import com.engine.libs.input.Input;
+import com.engine.libs.math.AdvancedMath;
 import com.engine.libs.rendering.Renderer;
+import com.engine.libs.world.World;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -74,36 +76,46 @@ public class FlyGroup extends WorldObject {
 
     @Override
     public void update(Input i) {
-        double minDis = Double.MAX_VALUE;
-        Healable closestEnemy = null;
-        Iterator<GameObject> it;
-        for(it = Main.main.visibleChunkObjects.iterator(); it.hasNext();) {
+
+        int smallestX=Integer.MAX_VALUE;
+        int smallestY=Integer.MAX_VALUE;
+        int largestX=Integer.MIN_VALUE;
+        int largestY=Integer.MIN_VALUE;
+
+        // ###### FIND BOUNDS #######
+        for (int j = flies.size()-1; j>=0; j--) {
+            Fly fly = flies.get(j);
+            smallestX = (int)Math.min(smallestX, fly.x);
+            smallestY = (int)Math.min(smallestY, fly.y);
+            largestX = (int)Math.max(largestX, fly.x);
+            largestY = (int)Math.max(largestY, fly.y);
+        }
+
+        // ###### SEARCH FOR NEARBY ENTITIES #######
+
+        boolean found = false;
+        Iterator<WorldObject> it;
+        for(it = Main.main.visibleChunkEntities.iterator(); it.hasNext();) {
             GameObject obj = it.next();
-            if(obj instanceof Healable && !((Healable) obj).isEnemy) {
-                double distance = Math.hypot((x - obj.x), (y - obj.y));
-                if(distance <= minDis) {
-                    minDis = distance;
-                    closestEnemy = (Healable) obj;
+            if(obj instanceof Healable) {
+                if(AdvancedMath.inRange(obj.x, obj.y,
+                        smallestX-range, smallestY-range,
+                        largestX-smallestX+range,
+                        largestY-smallestY+range)) {
+                     found = true;
+                     break;
                 }
             }
         }
 
-        boolean flyAway = false;
-        double direction = 0;
-
-        if(minDis < range && closestEnemy != null) {
-            direction = Fly.distance(
-                    closestEnemy.x, closestEnemy.y,
-                    x, y) - 180;
-            flyAway = true;
-        }
+        // ####### UPDATE FLIES ########
 
         for (int j = flies.size()-1; j>=0; j--) {
             Fly fly = flies.get(j);
             if(fly.state)
-                if(flyAway) {
+                if(found) {
                     fly.state = false;
-                    fly.angle = direction+random.nextInt(90)-45;
+                    fly.angle = random.nextInt(360);
                 }
             fly.update(i);
         }
