@@ -17,7 +17,8 @@ public class Trash extends WorldObject {
     ArrayList<UniParticle> particles;
     public final int Type = 12;
 
-    public static final int TYPE_BRANCHES = 1, TYPE_WATER = 2, TYPE_MUD = 3;
+    public static final int TYPE_WATER = 2;
+    public static final int TYPE_MUD = 3;
 
     public Trash(int x, int y, int type) {
         super(10, 1, 12);
@@ -28,16 +29,17 @@ public class Trash extends WorldObject {
 
 //        this.type = random.nextInt(3)+1;
         this.type = type;
-//        this.type = TYPE_BRANCHES;
 
         particles = new ArrayList<>();
 
         int depth = 0;
 
+        int smallestX = Integer.MAX_VALUE;
+        int smallestY = Integer.MAX_VALUE;
+        int largestX = Integer.MIN_VALUE;
+        int largestY = Integer.MIN_VALUE;
+
         switch (type) {
-            case TYPE_BRANCHES:
-                depth = 5;
-                type = random.nextBoolean() ? TYPE_WATER : TYPE_MUD;
             case TYPE_WATER:
                 depth = 4;
                 Color baseColor1 = new Color(150, 150, 230);
@@ -97,8 +99,14 @@ public class Trash extends WorldObject {
                             r.fillCircle(x, y, size, color);
                         }
                     });
+
+                    smallestX = Math.min(smallestX, xx-size/2);
+                    smallestY = Math.min(smallestY, yy-size/2);
+                    largestX = Math.max(largestX, xx+size/2);
+                    largestY = Math.max(largestY, yy+size/2);
                 }
-                this.mask = new Mask.Rectangle(x-30, y-30, 60, 60);
+                this.mask = new Mask.Rectangle(smallestX, smallestY,
+                        largestX-smallestX, largestY-smallestY);
                 break;
             case TYPE_MUD:
                 depth = 4;
@@ -156,8 +164,14 @@ public class Trash extends WorldObject {
                             r.fillCircle(x, y, size, color);
                         }
                     });
+
+                    smallestX = Math.min(smallestX, xx-size/2);
+                    smallestY = Math.min(smallestY, yy-size/2);
+                    largestX = Math.max(largestX, xx+size/2);
+                    largestY = Math.max(largestY, yy+size/2);
                 }
-                this.mask = new Mask.Rectangle(x-30, y-30, 60, 60);
+                this.mask = new Mask.Rectangle(smallestX, smallestY,
+                        largestX-smallestX, largestY-smallestY);
                 break;
         }
 

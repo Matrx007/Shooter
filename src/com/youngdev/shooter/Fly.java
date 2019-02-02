@@ -155,6 +155,27 @@ public class Fly extends WorldObject {
         r.fillPolygon(xPoints, yPoints, points.length, color);
     }
 
+    static void drawPoly(double[][] points, Color color, Renderer r) {
+        double[] xPoints = new double[points.length]/*{
+                points[0][0],
+                points[1][0],
+                points[2][0],
+                points[3][0]
+        }*/;
+        double[] yPoints = new double[points.length]/*{
+            points[0][1],
+                    points[1][1],
+                    points[2][1],
+                    points[3][1]
+        }*/;
+
+        for(int i = 0; i < points.length; i++) {
+            xPoints[i] = points[i][0];
+            yPoints[i] = points[i][1];
+        }
+        r.drawPolygon(xPoints, yPoints, points.length, color);
+    }
+
     static double[] rotatePoint(double x, double y, double anchorX,
                                        double anchorY, double degrees) {
         double xx = (x - anchorX) * Math.cos(degrees * Math.PI / 180) - (y - anchorY) * Math.sin(degrees * Math.PI / 180) + anchorX;

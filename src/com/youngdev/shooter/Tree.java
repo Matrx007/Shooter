@@ -49,7 +49,7 @@ public class Tree extends WorldObject {
 
         // HERE: Bush gen V 1.0
         Rectangle bounds = null;
-        switch (type) {
+        switch (this.type) {
             case TYPE_OAK:
                 int smallestX=Integer.MAX_VALUE,
                         smallestY=Integer.MAX_VALUE,

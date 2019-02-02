@@ -277,6 +277,8 @@ public class Main extends Game {
         soundManager.addClip("sounds/beeFlyingAway.wav", "beeFlyingAway");
 
         soundManager.addClip("sounds/tapping.wav", "branchesTouched");
+
+        soundManager.addClip("sounds/explosion.wav", "explosion");
     }
 
     public void deleteChunk(int x, int y) {
@@ -292,9 +294,9 @@ public class Main extends Game {
         int minX = x*chunkSize;
         int minY = y*chunkSize;
 
-//        if(random.nextInt(10) == 0) {
-//            chunk.add(new DuleKiva(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY));
-//        }
+        if(random.nextInt(10) == 0 || true) {
+            chunkEntities.add(new DuleKiva(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY));
+        }
 
         if(random.nextBoolean()) {
             chunk.add(new Bush(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY));
@@ -340,7 +342,7 @@ public class Main extends Game {
         }
 
         if(random.nextInt(4)==1) {
-            chunkEntities.add(new Rabbit(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY));
+            chunkEntities.add(new Rabbit(minX+chunkSize/2, minY+chunkSize/2));
         }
 
         /*if(random.nextInt(7)==3) {
@@ -450,6 +452,12 @@ public class Main extends Game {
         structuralBlocks.removeIf(obj -> obj.mask.isColliding(x, y));
     }
 
+    public void addEntity(WorldObject entity) {
+        int cX = Math.floorDiv((int)entity.x, chunkSize);
+        int cY = Math.floorDiv((int)entity.y, chunkSize);
+        chunkEntities.get(new Point(cX, cY)).add(entity);
+    }
+
     void findOnScreenObjects() {
         int chunkXTopLeft = (int)Math.floor(camera.cX/(double)chunkSize);
         int chunkYTopLeft = (int)Math.floor(camera.cY/(double)chunkSize);
@@ -488,12 +496,15 @@ public class Main extends Game {
             for(int yy = chunkYTopLeft-4; yy < chunkYBottomRight+4; yy++) {
                 HashSet<WorldObject> chunk = chunkEntities.
                         get(new Point(xx, yy));
-                chunk.forEach(obj -> {
-                    if((obj.mask == null && isPixelOnScreen(
+                chunk.removeIf(obj -> {
+                    if((obj.mask != null && isPixelOnScreen(
                             (int)obj.x, (int)obj.y, 4)) ||
-                            visibleAreaMask.isColliding(obj.mask)) {
+                            (obj.mask != null && obj.mask instanceof
+                                    Mask.Rectangle && visibleAreaMask.
+                                    isColliding(obj.mask))) {
                         addQueue.add(obj);
                     }
+                    return obj.dead;
                 });
             }
         }

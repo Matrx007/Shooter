@@ -11,6 +11,7 @@ public class Coin extends WorldObject {
 
     public double speed, rotation, rotationSpeed, xD, yD, angle;
     public final int Type = 2;
+    public boolean pickable;
 
     public Coin(int x, int y, double angle) {
         super(2, 9, 2);
@@ -24,6 +25,7 @@ public class Coin extends WorldObject {
         this.xD = x;
         this.yD = y;
         this.angle = angle;
+        this.pickable = false;
 
 //        this.speed = 0;
         this.speed = random.nextDouble()*3+1d;
@@ -39,7 +41,7 @@ public class Coin extends WorldObject {
         this.rotationSpeed *= 0.95;
         this.rotation += rotationSpeed;
 
-        if(Fly.distance(xD, yD, Main.main.player.x, Main.main.player.y) < 24d) {
+        if(Fly.distance(xD, yD, Main.main.player.x, Main.main.player.y) < 24d && pickable) {
             if(Fly.distance(xD, yD, Main.main.player.x, Main.main.player.y) < 4d) {
                 dead = true;
                 Main.main.player.lastCoinX = xD;
@@ -51,6 +53,8 @@ public class Coin extends WorldObject {
                 speed = 4d;
             }
         }
+
+        if(this.speed < 1) pickable = true;
 
         double addX = Math.cos(Math.toRadians(angle))*speed;
         double addY = Math.sin(Math.toRadians(angle))*speed;

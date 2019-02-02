@@ -112,18 +112,16 @@ public class Branches extends WorldObject {
                     }
                     found = true;
                 } else {
-                    for (GameObject entity : Main.main.entities) {
-                        if(entity instanceof Healable) {
-                            if (Fly.distance(entity.x, entity.y, owner.x, owner.y) < 16d) {
-                                if(move) {
-                                    speedX = Math.cos(Math.toRadians(
-                                            Fly.angle(entity.x, entity.y, owner.x, owner.y) - 180));
-                                    speedY = Math.sin(Math.toRadians(
-                                            Fly.angle(entity.x, entity.y, owner.x, owner.y) - 180));
-                                }
-                                found = true;
-                                break;
+                    for (GameObject entity : Main.main.visibleChunkEntities) {
+                        if (Fly.distance(entity.x, entity.y, owner.x, owner.y) < 16d) {
+                            if(move) {
+                                speedX = Math.cos(Math.toRadians(
+                                        Fly.angle(entity.x, entity.y, owner.x, owner.y) - 180));
+                                speedY = Math.sin(Math.toRadians(
+                                        Fly.angle(entity.x, entity.y, owner.x, owner.y) - 180));
                             }
+                            found = true;
+                            break;
                         }
                     }
                 }

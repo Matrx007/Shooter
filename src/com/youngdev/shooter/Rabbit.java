@@ -32,6 +32,7 @@ public class Rabbit extends Healable {
         super(8, x, y, 16, 16, 50, 13, 5, false, collideWithOthers);
         random = new Random();
 
+        this.mask = new Mask.Rectangle(x-20, y-20, 40, 40);
         cm = new AABBCollisionManager(this, Main.collisionMap);
         if(collideWithOthers) aabbComponent = new AABBComponent(this.mask);
 
@@ -80,10 +81,12 @@ public class Rabbit extends Healable {
                         (1-(step%150)/150d)*speed*2d));
         if(speed > 0 && (x == prevX && y == prevY)) {
             cm.unstuck();
-            int k = Main.collisionMap.
+            int collisions = Main.collisionMap.
                     collisionWithWhoExcept(mask, aabbComponent).size();
-            if(k > 0)
-                System.out.println("Collisions: "+k);
+            if(collisions > 0)
+                if(!Main.isPixelOnScreen((int)x, (int)y, 1)) {
+                    dead = true;
+                }
         }
     }
 
