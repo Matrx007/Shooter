@@ -499,8 +499,8 @@ public class Main extends Game {
                 chunk.removeIf(obj -> {
                     if((obj.mask != null && isPixelOnScreen(
                             (int)obj.x, (int)obj.y, 4)) ||
-                            (obj.mask != null && obj.mask instanceof
-                                    Mask.Rectangle && visibleAreaMask.
+                            (obj.mask instanceof Mask.Rectangle
+                                    && visibleAreaMask.
                                     isColliding(obj.mask))) {
                         addQueue.add(obj);
                     }
