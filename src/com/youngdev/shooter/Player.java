@@ -141,7 +141,7 @@ public class Player extends Healable {
         }
 
         // HERE: Use keyboard to move
-        if(Main.clientId == clientId) {
+        if(Main.clientId == clientId || Main.isLocal) {
             moveX = (i.isKey(KeyEvent.VK_D) ? 1 : 0) - (i.isKey(KeyEvent.VK_A) ? 1 : 0);
             moveY = (i.isKey(KeyEvent.VK_S) ? 1 : 0) - (i.isKey(KeyEvent.VK_W) ? 1 : 0);
         }

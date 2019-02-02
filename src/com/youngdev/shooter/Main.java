@@ -77,7 +77,7 @@ public class Main extends Game {
     private boolean movingStopped;
     private Module[] modulesServerSide;
     private Module[] modulesClientSide;
-    private static boolean isServer, gtClient, isLocal;
+    public static boolean isServer, isClient, isLocal;
     private static int port;
     public static int clientId;
     private static String ip;
@@ -112,12 +112,17 @@ public class Main extends Game {
     public List<Fly> flies;
 
     public static void main(String[] args) {
-        gtClient = false;
+        startMenuMode = false;
+        isClient = false;
+        isLocal = true;
+        new Main();
+        System.exit(-2);
+        isClient = false;
         port = 12884;
         ip = null;
         if(args.length > 2) {
             isServer = args[0].equals("server");
-            gtClient = args[0].equals("client");
+            isClient = args[0].equals("client");
             isLocal = args[0].equals("local");
             switch (args[1]) {
                 case "port":
@@ -174,7 +179,7 @@ public class Main extends Game {
                 new WorldSender(this)
         };
 
-        startMenuMode = true;
+//        startMenuMode = true;
         if(isServer) {
             acceptingClients = true;
             clients = new ArrayList<>();
@@ -260,7 +265,7 @@ public class Main extends Game {
             }).start();
         }
 
-         if (gtClient) {
+         if (isClient) {
              // HERE: Is client
              packetReceiveQueue_clientSide = new ConcurrentLinkedDeque<>();
              packetSendQueue_clientSide = new ConcurrentLinkedDeque<>();
@@ -442,10 +447,10 @@ public class Main extends Game {
     }
 
     private void generateChunk(int x, int y) {
-        System.out.println("cX:"+x);
-        System.out.println("cY:"+y);
-        System.out.println("mX:"+currentGameMode.getMiddleX());
-        System.out.println("mY:"+currentGameMode.getMiddleY());
+//        System.out.println("cX:"+x);
+//        System.out.println("cY:"+y);
+//        System.out.println("mX:"+currentGameMode.getMiddleX());
+//        System.out.println("mY:"+currentGameMode.getMiddleY());
         /*if(!AdvancedMath.inRange(x, y,
                 currentGameMode.getMiddleX()-
                 currentGameMode.getWorldWidth()/2,
@@ -944,52 +949,57 @@ public class Main extends Game {
 
 
 
-        if(!isServer) {
-            for (Module module : modulesClientSide) {
-                module.tick();
-            }
-            processSnd_clientSide();
-            processRcv_clientSide();
-        } else {
-            for (Module module : modulesServerSide) {
-                module.tick();
-            }
-            int value = 0;
-            for(int k = 0; k < clients.size(); k++) {
-                UserData data = this.data.get(k);
-                int j1 = 64;
-                while(j1 > 0 && packetReceiveQueue_serverSide.size() > 0) {
-                    processRcv_serverSide(k);
-                    j1--;
+        if(!isLocal)
+            if(!isServer) {
+                for (Module module : modulesClientSide) {
+                    module.tick();
                 }
-//                data.calcVisibleArea();
-                Player player = players.get(k);
-                data.player = player;
-                player.collisionMap = findOnScreenCollisions(
-                        data.chunkXTopLeft, data.chunkYTopLeft,
-                        data.chunkXBottomRight, data.chunkYBottomRight);
-                player.cm = new AABBCollisionManager(player,
-                        player.collisionMap);
-                player.update(i);
-                processSnd_ServerSide(k);
+                processSnd_clientSide();
+                processRcv_clientSide();
+            } else if(isClient) {
+                for (Module module : modulesServerSide) {
+                    module.tick();
+                }
+                int value = 0;
+                for(int k = 0; k < clients.size(); k++) {
+                    UserData data = this.data.get(k);
+                    int j1 = 64;
+                    while(j1 > 0 && packetReceiveQueue_serverSide.size() > 0) {
+                        processRcv_serverSide(k);
+                        j1--;
+                    }
+    //                data.calcVisibleArea();
+                    Player player = players.get(k);
+                    data.player = player;
 
-                value += packetSendQueue_serverSide.get(k).size();
+                    processSnd_ServerSide(k);
+
+                    value += packetSendQueue_serverSide.get(k).size();
+                }
+
+                stats_sendQueueLengthValues.addLast(value);
+            }
+        if(isClient) {
+
+            if (stats_sendQueueLengthValues.size() > Main.width) {
+                while (stats_sendQueueLengthValues.size() > Main.width) {
+                    stats_sendQueueLengthValues.removeFirst();
+                }
             }
 
-            stats_sendQueueLengthValues.addLast(value);
-        }
-
-        if(stats_sendQueueLengthValues.size() > Main.width) {
-            while(stats_sendQueueLengthValues.size() > Main.width) {
-                stats_sendQueueLengthValues.removeFirst();
+            if (stats_sendQueueBytesValues.size() > Main.width) {
+                while (stats_sendQueueBytesValues.size() > Main.width) {
+                    stats_sendQueueBytesValues.removeFirst();
+                }
             }
         }
 
-        if(stats_sendQueueBytesValues.size() > Main.width) {
-            while(stats_sendQueueBytesValues.size() > Main.width) {
-                stats_sendQueueBytesValues.removeFirst();
-            }
-        }
+        player.collisionMap = findOnScreenCollisions(
+                chunkXTopLeft, chunkYTopLeft,
+                chunkXBottomRight, chunkYBottomRight);
+        player.cm = new AABBCollisionManager(player,
+                player.collisionMap);
+        player.update(i);
 
         entities.addAll(addEntities);
         addEntities.clear();
@@ -1220,9 +1230,10 @@ public class Main extends Game {
 
 
         // HERE: Generate new chunks
+        long startingTime = System.nanoTime();
         if(prevCamX != core.getRenderer().getCamX() || prevCamY != core.getRenderer().getCamY()) {
-            findOnScreenObjects();
-            if(isServer || startMenuMode) {
+//            findOnScreenObjects();
+            if(isServer || startMenuMode || isLocal) {
                 for (int xx = chunkXTopLeft - 2; xx < chunkXBottomRight + 2; xx++) {
                     for (int yy = chunkYTopLeft - 2; yy < chunkYBottomRight + 2; yy++) {
                         if (getChunkArray(xx, yy).size() == 0) {
@@ -1232,6 +1243,8 @@ public class Main extends Game {
                 }
             }
         }
+        System.out.println(System.nanoTime()-startingTime);
+
 
         findOnScreenBlocked = false;
         if(findOnScreenCalled) findOnScreenObjects();
@@ -1486,23 +1499,25 @@ public class Main extends Game {
             y += addY;
             r.drawText("Visible chunk objects: " + visibleChunkObjects.size(), 8, y, 10, Color.black);
             y += addY;
-            int rcv = 0;
-            int snd = 0;
-            if(isServer) {
-                for (int i = 0; i < clients.size(); i++) {
-                    rcv += packetReceiveQueue_serverSide.
-                            get(i).size();
-                    snd += packetSendQueue_serverSide.
-                            get(i).size();
+            if (!isLocal) {
+                int rcv = 0;
+                int snd = 0;
+                if (isServer) {
+                    for (int i = 0; i < clients.size(); i++) {
+                        rcv += packetReceiveQueue_serverSide.
+                                get(i).size();
+                        snd += packetSendQueue_serverSide.
+                                get(i).size();
+                    }
                 }
+                int amount = isServer ? snd :
+                        packetSendQueue_clientSide.size();
+                r.drawText("Send packets queue: " + amount, 8, y, 10, Color.black);
+                y += addY;
+                amount = isServer ? rcv :
+                        packetReceiveQueue_clientSide.size();
+                r.drawText("Received packets queue: " + amount, 8, y, 10, Color.black);
             }
-            int amount = isServer ? snd :
-                    packetSendQueue_clientSide.size();
-            r.drawText("Send packets queue: " + amount, 8, y, 10, Color.black);
-            y += addY;
-            amount = isServer ? rcv :
-                    packetReceiveQueue_clientSide.size();
-            r.drawText("Received packets queue: " + amount, 8, y, 10, Color.black);
         }
         r.relative();
         r.clearFilters();
@@ -1635,12 +1650,14 @@ public class Main extends Game {
             }
         }
 
-        for (int i = dataToSend.size() - 1; i > 0; i--) {
-            packetSendQueue_clientSide.addFirst(dataToSend.get(i));
-        }
+        if(isClient)
+            for (int i = dataToSend.size() - 1; i > 0; i--) {
+                packetSendQueue_clientSide.addFirst(dataToSend.get(i));
+            }
 
         try {
-            outputStreamWriter.flush();
+            if(isClient || isServer)
+                outputStreamWriter.flush();
         } catch (IOException e1) {
             // TODO: Server closed
             e1.printStackTrace();
