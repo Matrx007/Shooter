@@ -15,16 +15,12 @@ public class Branches extends WorldObject {
     public final int Type = 12;
     private int smallestX, smallestY, largestX, largestY;
     private Color baseColor0;
-    private Random random;
-    private AABBCollisionManager cm;
 
     public Branches(int x, int y) {
-        super(15, 1, 14);
+        super(15, 2, 14);
 
         this.x = x;
         this.y = y;
-
-        random = new Random();
 
         particles = new ArrayList<>();
 
@@ -41,8 +37,6 @@ public class Branches extends WorldObject {
             particles.add(createParticle((int)xx, (int)yy));
         }
         this.mask = new Mask.Rectangle(x-30, y-30, 60, 60);
-        cm = new AABBCollisionManager(this, Main.collisionMap);
-        this.depth = this.depth*1024+512+random.nextInt(512);
     }
 
     public UniParticle createParticle(int addX, int addY) {
@@ -97,23 +91,33 @@ public class Branches extends WorldObject {
             public void update() {
 //                System.out.println("xx = " + xx);
                 double prevAngle = angle;
-                speedX *= 0.9;
-                speedY *= 0.9;
+                speedX *= 0.75;
+                speedY *= 0.75;
+
+                ArrayList<GameObject> nearEntities = new ArrayList<>();
+                for (GameObject entity : Main.main.visibleChunkEntities) {
+                    if(entity.mask instanceof Mask.Rectangle &&
+                            entity.mask.isColliding(mask)) {
+                        nearEntities.add(entity);
+                    }
+                }
 
                 boolean found = false;
                 boolean move = random.nextBoolean();
                 Player player = Main.main.player;
-                if(Fly.distance(owner.x, owner.y, player.x, player.y) < 16d) {
+                if(Fly.distance(owner.x, owner.y, player.x, player.y) < 8d) {
                     if(move) {
                         speedX = Math.cos(Math.toRadians(
-                                Fly.angle(player.x, player.y, owner.x, owner.y) - 180));
+                                Fly.angle(player.x, player.y, owner.x, owner.y) - 180 +
+                                random.nextInt(30)-15))*2d;
                         speedY = Math.sin(Math.toRadians(
-                                Fly.angle(player.x, player.y, owner.x, owner.y) - 180));
+                                Fly.angle(player.x, player.y, owner.x, owner.y) - 180 +
+                                        random.nextInt(30)-15))*2d;
                     }
                     found = true;
                 } else {
-                    for (GameObject entity : Main.main.visibleChunkEntities) {
-                        if (Fly.distance(entity.x, entity.y, owner.x, owner.y) < 16d) {
+                    for (GameObject entity : nearEntities) {
+                        if (Fly.distance(entity.x, entity.y, owner.x, owner.y) < 24d) {
                             if(move) {
                                 speedX = Math.cos(Math.toRadians(
                                         Fly.angle(entity.x, entity.y, owner.x, owner.y) - 180));
@@ -165,12 +169,12 @@ public class Branches extends WorldObject {
             smallestY = Math.min(smallestY, p.y);
             largestX = Math.max(largestX, p.x);
             largestY = Math.max(largestY, p.y);
-//            System.out.println("p.x = " + p.x);
-//            System.out.println("p.y = " + p.y);
+//            System.out.println("p.scoreX = " + p.scoreX);
+//            System.out.println("p.scoreY = " + p.scoreY);
             p.update();
 //            System.out.println("====");
-//            System.out.println("p.x = " + p.x);
-//            System.out.println("p.y = " + p.y);
+//            System.out.println("p.scoreX = " + p.scoreX);
+//            System.out.println("p.scoreY = " + p.scoreY);
         });
 
         mask = new Mask.Rectangle(

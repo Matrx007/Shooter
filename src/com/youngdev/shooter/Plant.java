@@ -15,7 +15,6 @@ import static com.youngdev.shooter.Main.main;
 public class Plant extends WorldObject {
     ArrayList<Piece> leaf;
     private boolean prevCollision;
-    private Random random;
     private int type;
     public final int Type = 6;
     public boolean collision;
@@ -23,7 +22,7 @@ public class Plant extends WorldObject {
     private static final int TYPE_SINGLE =0, TYPE_PATCH=1;
     
     public Plant(int x, int y, Color color) {
-        super(6, 2, 6);
+        super(6, 1.5, 6);
         this.x = x;
         this.y = y;
         this.prevCollision = false;
@@ -31,10 +30,6 @@ public class Plant extends WorldObject {
         leaf = new ArrayList<>();
 
         collision = false;
-
-        // HERE: Fix depth
-        this.random = new Random();
-        this.depth = random.nextInt(1023)+depth*1024;
 
         int smallestX=Integer.MAX_VALUE, smallestY=Integer.MAX_VALUE, largestX=Integer.MIN_VALUE, largestY=Integer.MIN_VALUE;
 

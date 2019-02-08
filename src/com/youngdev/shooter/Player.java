@@ -1,6 +1,5 @@
 package com.youngdev.shooter;
 
-import com.engine.Game;
 import com.engine.libs.game.GameObject;
 import com.engine.libs.game.Mask;
 import com.engine.libs.game.behaviors.AABBCollisionManager;
@@ -18,73 +17,54 @@ import java.util.*;
 public class Player extends Healable {
 
     public ArrayList<UniParticle> particles;
-    private Random random;
     public AABBCollisionManager cm;
-    boolean blinkingON;
-    private boolean found;
-    private boolean waitingForRelease;
-    public String name = "Jane Doe";
-    public boolean prevOnPlant, onPlant, buildingMode, inventoryOpen, leftHandShooting, rightHandShooting, clipOverlayOpen;
-    public int xx, yy, invSize = 24, midX, midY, selectedItem, time=60, timer, leftHandReload, rightHandReload,
-            reloadTime = 50, bulletTimingCap = 5, leftHandBulletTimingCapCounter, leftHandBulletAmountCounter,
-            rightHandBulletTimingCapCounter, rightHandBulletAmountCounter, bulletsPerShot = 5, ammo = 34, maxAmmo = 45,
-            clip = 10, money, clientId = -1, moveX, moveY;
-    public double lastCoinX, lastCoinY, coinOverlayAlpha, coinOverlayX, coinOverlayY, clipOverlayAlpha,
-            clipOverlayRotation, clipOverlayRotationSpeed, clipOverlayRotationTarget, health, healthMax,
-            hunger, hungerMax, statsOverlayAlpha, statsOverlayRotation, statsOverlayRotationSpeed,
-            statsOverlayRotationTarget, autoReloadBlinkingTime, autoReloadBlinkingTimer, autoReloadTime,
-            autoReloadTimer, autoReloadMaximumAmmo, autoReloadY, autoReloadTargetY, slowMotionSpeedMultiplierTarget,
-            raysAccuracy = 1;
-    private int blinkingTime = 30, lastMoveX, lastMoveY;
-    public int[] items;
-    private String[] itemNames;
-    private StructuralBlock[] itemSamples;
+
+    boolean prevOnPlant, onPlant, prevOnPuddle, onPuddle;
+    public int xx;
+    public int yy;
+    private int midX;
+    private int midY;
+    private int time=60;
+    private int timer;
+    public long money;
+    int moveX;
+    int moveY;
+
+    double lastCoinX, lastCoinY, coinOverlayAlpha,
+            coinOverlayX, coinOverlayY;
+    private double slowMotionSpeedMultiplierTarget;
+
     private static Color baseColor = new Color(170, 172, 78); // 170, 32, 128
-    private static int statsReloadTargetHeight = -56-12-16;
-    private static int reloadTargetHeight = -16;
-    private float speedX, targetSpeedX, speedY, targetSpeedY, maxSpeed, speedStep, blinkingTimer;
+    private float speedX, targetSpeedX, speedY, targetSpeedY,
+            maxSpeed, speedStep, blinkingTimer;
     private ArrayList<Vector8> rays;
-    public ShadowRenderer shadowRenderer;
+    private ShadowRenderer shadowRenderer;
     public final int Type = 7;
-    public CollisionMap collisionMap;
-    public int step;
+    private int step;
+    static final int maxHealth = 5;
+    public int health;
+    public boolean isDead;
 
     public Player(int x, int y) {
         super(7, x, y, 4, 4, 200, 0, 10, false, false);
         this.depth = 10;
         this.random = new Random();
         particles = new ArrayList<>();
-        name = "Jane Doe";
 
         // HERE: Fix depth
         depth = random.nextInt(1023)+depth*1024;
 
-        leftHandReload = 0;
-        rightHandReload = 0;
-        leftHandShooting = false;
-        rightHandShooting = false;
-        leftHandBulletAmountCounter = 0;
-        rightHandBulletAmountCounter = 0;
-        leftHandBulletTimingCapCounter = 0;
-        rightHandBulletTimingCapCounter = 0;
-
         onPlant = false;
         prevOnPlant = false;
+        isDead = false;
 
         lastCoinX = x;
         lastCoinY = y-256;
-
-        health = 100d;
-        hunger = 100d;
-        healthMax = 150d;
-        hungerMax = 150d;
 
         midX = Main.main.getE().getWidth()/2;
         midY = Main.main.getE().getHeight()/2;
 
         core = Main.main.getE();
-
-        this.buildingMode = true;
 
         super.x = x;
         super.y = y;
@@ -100,33 +80,13 @@ public class Player extends Healable {
         this.speedStep = 0.5f;
         this.blinkingTimer = 0;
 
-        this.clipOverlayAlpha = 0d;
-        this.clipOverlayOpen = false;
-        this.clipOverlayRotation = 0;
-        this.clipOverlayRotationSpeed = 0;
-        this.clipOverlayRotationTarget = 0;
-
-        this.statsOverlayAlpha = 0;
-        this.statsOverlayRotation = 0;
-        this.statsOverlayRotationSpeed = 0;
-        this.statsOverlayRotationTarget = 0;
-        this.waitingForRelease = false;
-
-        autoReloadBlinkingTime = 15;
-        autoReloadBlinkingTimer = 0;
-        autoReloadTime = 120;
-        autoReloadTimer = 0;
-        autoReloadMaximumAmmo = 10;
-        autoReloadY = reloadTargetHeight;
-        autoReloadTargetY = reloadTargetHeight;
+        health = maxHealth;
 
         slowMotionSpeedMultiplierTarget = 1d;
 
-        lastMoveX = lastMoveY = 0;
-
         rays = new ArrayList<>();
         shadowRenderer = new ShadowRenderer();
-        collisionMap = Main.collisionMap;
+        CollisionMap collisionMap = Main.collisionMap;
         mask = new Mask.Rectangle(x-4, y-4, 8, 8);
         aabbComponent = new AABBComponent(this.mask);
         cm = new AABBCollisionManager(this, collisionMap);
@@ -137,42 +97,47 @@ public class Player extends Healable {
         // ###### MOVEMENT AND SOUNDS ########
         blinkingTimer += 1d/Main.toSlowMotion(1d);
 
-        if(blinkingTimer >= blinkingTime) {
-            blinkingON = !blinkingON;
-            blinkingTimer = 0;
-        }
+        if(!isDead) {
+            // HERE: Use keyboard to move
+            moveX = (i.isKey(KeyEvent.VK_D) ? 1 : 0) - (i.isKey(KeyEvent.VK_A) ? 1 : 0);
+            moveY = (i.isKey(KeyEvent.VK_S) ? 1 : 0) - (i.isKey(KeyEvent.VK_W) ? 1 : 0);
 
-        // HERE: Use keyboard to move
-        moveX = (i.isKey(KeyEvent.VK_D) ? 1 : 0) - (i.isKey(KeyEvent.VK_A) ? 1 : 0);
-        moveY = (i.isKey(KeyEvent.VK_S) ? 1 : 0) - (i.isKey(KeyEvent.VK_W) ? 1 : 0);
-
-        if((moveX != 0 || moveY != 0)) {
-            timer = time;
-            lastMoveX = moveX;
-            lastMoveY = moveY;
-            step++;
-
-            if(step % 20 == 1) {
-                // TODO: Play sound depending on player's location
-                if(onPlant) {
-                    Main.main.soundManager.playSound("grass"+
-                            ((step/20 % 2 == 0) ? 1 : 0), -15f);
-                } else {
-                    Main.main.soundManager.playSound("dirt" +
-                            (random.nextInt(4)), -10f);
+            if ((moveX != 0 || moveY != 0)) {
+                timer = time;
+                step++;
+                if (step % 20 == 1) {
+                    // TODO: Play sound depending on player's location
+                    if (onPuddle) {
+                        Main.main.soundManager.playSound("puddle" +
+                                random.nextInt(5), -10f);
+                    } else if (onPlant) {
+                        Main.main.soundManager.playSound("grass" +
+                                ((step / 20 % 2 == 0) ? 1 : 0), -15f);
+                    } else {
+                        Main.main.soundManager.playSound("dirt" +
+                                (random.nextInt(4)), -10f);
+                    }
+                } else if (!prevOnPuddle && onPuddle) {
+                    Main.main.soundManager.playSound("puddle" +
+                            random.nextInt(5), -10f);
+                } else if (!prevOnPlant && onPlant) {
+                    Main.main.soundManager.playSound("grass" +
+                            (random.nextBoolean() ? 1 : 0), -15f);
                 }
-            } else if(!prevOnPlant && onPlant) {
-                Main.main.soundManager.playSound("grass"+
-                        (random.nextBoolean() ? 1 : 0), -15f);
+            } else {
+                step = 0;
             }
-        } else {
-            step = 0;
-        }
-        prevOnPlant = onPlant;
-        onPlant = false;
+            prevOnPuddle = onPuddle;
+            onPuddle = false;
+            prevOnPlant = onPlant;
+            onPlant = false;
 
-        targetSpeedX = moveX * maxSpeed;
-        targetSpeedY = moveY * maxSpeed;
+            targetSpeedX = moveX * maxSpeed;
+            targetSpeedY = moveY * maxSpeed;
+        } else {
+            targetSpeedX = 0;
+            targetSpeedY = 0;
+        }
 
         speedX += Math.signum(targetSpeedX - speedX)*speedStep;
         speedY += Math.signum(targetSpeedY - speedY)*speedStep;
@@ -180,63 +145,50 @@ public class Player extends Healable {
         speedX = Math.max(-maxSpeed, Math.min(maxSpeed, speedX));
         speedY = Math.max(-maxSpeed, Math.min(maxSpeed, speedY));
 
-//        x += speedX;
-//        y += speedY;
         cm.move(speedX, speedY);
-//        mask.move(speedX, speedY);
 
-        /*// -- HOR / X --
-        if(collisionMap.collisionWithExcept(mask, aabbComponent)) {
-            while(!collisionMap.collisionWithExcept(mask.shift(-lastMoveX, 0),
-                    aabbComponent)) {
-                x -= lastMoveX;
-                mask.move(lastMoveX, 0);
-            }
+        if(Main.collisionMap.collisionWithExcept(mask, aabbComponent)) {
+            cm.unstuck();
         }
-
-        // -- VER / Y --
-        if(collisionMap.collisionWithExcept(mask, aabbComponent)) {
-            while(!collisionMap.collisionWithExcept(mask.shift(0, -lastMoveY),
-                    aabbComponent)) {
-                y -= lastMoveY;
-                mask.move(0, lastMoveY);
-            }
-        }*/
 
         // ###### PARTICLES ######
 
         this.xx = (int) x;
         this.yy = (int) y;
 
-        for (int j = 0; j < 2; j++) {
-            int tone = random.nextInt(30)-15;
-            int sDir = random.nextInt(359);
-            int sDistance = random.nextInt(8);
-            int xx = this.xx + (int) (Math.cos(Math.toRadians(sDir)) * sDistance);
-            int yy = this.yy + (int) (Math.sin(Math.toRadians(sDir)) * sDistance);
-            int fadingSpeed = random.nextInt(8)+8;
-            int size = random.nextInt(4)+2;
-            Color color = new Color(baseColor.getRed()+tone, baseColor.getGreen()+tone, baseColor.getBlue()+tone);
-            UniParticle.FadingProcess fadingProcess = new UniParticle.FadingProcess(255, fadingSpeed, true);
-            particles.add(new UniParticle(xx, yy, size, true, color, fadingProcess));
-        }
+        if(!isDead)
+            for (int j = 0; j < 2; j++) {
+                int tone = random.nextInt(30)-15;
+                int sDir = random.nextInt(359);
+                int sDistance = random.nextInt(8);
+                int xx = this.xx + (int) (Math.cos(Math.toRadians(sDir)) * sDistance);
+                int yy = this.yy + (int) (Math.sin(Math.toRadians(sDir)) * sDistance);
+                int fadingSpeed = random.nextInt(8)+8;
+                int size = random.nextInt(4)+2;
+                Color color = new Color(baseColor.getRed()+tone, baseColor.getGreen()+tone, baseColor.getBlue()+tone);
+                UniParticle.FadingProcess fadingProcess = new UniParticle.FadingProcess(255, fadingSpeed, true);
+                particles.add(new UniParticle(xx, yy, size, true, color, fadingProcess));
+            }
 
         particles.forEach(UniParticle::update);
         particles.removeIf(particle -> particle.dead);
 
         Main.slowMotionSpeed = (float)AdvancedMath.setRange(Main.slowMotionSpeed, 0.4d, 1d);
-        Main.main.camera.bluishEffect = (float)AdvancedMath.setRange(Main.main.camera.bluishEffect, 0d, 0.5d);
 
         this.mask.x = x;
         this.mask.y = y;
 
         this.aabbComponent.area.x = x;
         this.aabbComponent.area.y = y;
+
+        this.coinOverlayX += (lastCoinX -= coinOverlayX) * 0.1d;
+        this.coinOverlayY += (lastCoinY -= coinOverlayY) * 0.1d;
+
+        coinOverlayAlpha = Math.max(0, Math.min(1, coinOverlayAlpha-0.025));
     }
 
     public void castRays() {
         // ---- Shadow Caster V 0.2 ----
-//        long start = System.nanoTime();
         rays.clear();
         int iterations = 0;
         int raysCast = 0;
@@ -259,8 +211,8 @@ public class Player extends Healable {
                     (int)(mask.x+mask.w), (int)(mask.y+mask.h),
                     (int)mask.x, (int)(mask.y+mask.h)));
             for(int j = 0; j < 4; j++) {
-//                Point current = new Point(mask.x + (((j+1) % 2 == 0) ? mask.w : 0), mask.y + ((j % 2 == 0) ? mask.h : 0));
-//                Point next = new Point(mask.x + (((j+2) % 2 == 0) ? mask.w : 0), mask.y + (((j+1) % 2 == 0) ? mask.h : 0));
+//                Point current = new Point(mask.scoreX + (((j+1) % 2 == 0) ? mask.w : 0), mask.scoreY + ((j % 2 == 0) ? mask.h : 0));
+//                Point next = new Point(mask.scoreX + (((j+2) % 2 == 0) ? mask.w : 0), mask.scoreY + (((j+1) % 2 == 0) ? mask.h : 0));
 
                 Point current = findCorner(j, mask);
                 Point next = findCorner(j+1, mask);
@@ -275,20 +227,7 @@ public class Player extends Healable {
                         (int)(next.y+ Math.sin(Math.toRadians(disNext-180))*size), (int)next.x, (int)next.y));
                 raysCast++;
             }
-
-            /*if(minPoint != null && maxPoint != null) {
-                rays.add(new Vector8((int) minPoint.x, (int) minPoint.y,
-                        (int) (x + Math.cos(Math.toRadians(minAngle-180)) * 320d),
-                        (int) (y + Math.sin(Math.toRadians(minAngle-180)) * 320d),
-                        (int) (x + Math.cos(Math.toRadians(maxAngle-180)) * 320d),
-                        (int) (y + Math.sin(Math.toRadians(maxAngle-180)) * 320d),
-                        (int) maxPoint.x, (int) maxPoint.y));
-                raysCast++;
-            }*/
-
         }
-//        long end = System.nanoTime();
-//        System.out.println("Casted "+raysCast+" rays of "+iterations+" objects, took "+(end-start)+" ns");
     }
 
     @Override
@@ -296,9 +235,6 @@ public class Player extends Healable {
         particles.forEach(p -> p.render(r));
         if(Main.main.showDebugInfo)
             r.fillRectangle(xx, yy, 8, 8, Color.red);
-//        int x = Math.floorDiv(Main.main.getE().getInput().getRelativeMouseX(), 16)*16;
-//        int y = Math.floorDiv(Main.main.getE().getInput().getRelativeMouseY(), 16)*16;
-//        r.fillRectangle(x, y, 16, 16, new Color(40, 100, 70));
     }
 
     public void renderRays(Renderer r) {

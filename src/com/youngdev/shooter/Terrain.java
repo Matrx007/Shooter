@@ -22,10 +22,6 @@ public class Terrain extends WorldObject {
         this.y = y;
         this.type = type;
 
-        // HERE: Fix depth
-        Random random = new Random();
-        this.depth = random.nextInt(1023)+depth*1024;
-
         pieces = new ArrayList<>();
         int range = 48;
         int smallestX=Integer.MAX_VALUE, smallestY=Integer.MAX_VALUE, largestX=Integer.MIN_VALUE, largestY=Integer.MIN_VALUE;
@@ -36,8 +32,8 @@ public class Terrain extends WorldObject {
             int distance = (int)(Math.abs(random.nextGaussian())*range);
             int xx = x+(int)(Math.cos(Math.toRadians(angle))*distance);
             int yy = y+(int)(Math.sin(Math.toRadians(angle))*distance);
-//                    int xx = x-random.nextInt(range*2)+range;
-//                    int yy = y-random.nextInt(range*2)+range;
+//                    int xx = scoreX-random.nextInt(range*2)+range;
+//                    int yy = scoreY-random.nextInt(range*2)+range;
             int size;
             if(random.nextBoolean()) {
                 size = random.nextInt(6) + 5;

@@ -10,11 +10,12 @@ public abstract class WorldObject extends GameObject {
     public int type;
     protected Random random;
 
-    public WorldObject(int index, int depth, int type) {
+    public WorldObject(int index, double depth, int type) {
         random = new Random();
-        this.depth = depth;
+        this.type = type;
         this.index = index;
-        this.type = type * 1024 + random.nextInt(1024);
+        this.depth = (int)(depth * 1024d) +
+                random.nextInt(1024);
     }
 
     void checkLocation(double prevX, double prevY) {

@@ -2,17 +2,16 @@ package com.youngdev.shooter;
 
 import com.engine.Core;
 import com.engine.Game;
-import com.engine.libs.font.Alignment;
 import com.engine.libs.game.GameObject;
 import com.engine.libs.game.Mask;
 import com.engine.libs.game.behaviors.AABBCollisionManager;
 import com.engine.libs.input.Input;
 import com.engine.libs.math.AdvancedMath;
 import com.engine.libs.rendering.Filter;
+import com.engine.libs.rendering.Image;
 import com.engine.libs.rendering.RenderUtils;
 import com.engine.libs.rendering.Renderer;
 import com.engine.libs.world.CollisionMap;
-import com.sun.javafx.geom.Vec2d;
 import com.sun.javafx.geom.Vec3d;
 
 import javax.imageio.ImageIO;
@@ -20,7 +19,7 @@ import javax.sound.sampled.Clip;
 import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
 import java.awt.*;
-import java.awt.geom.Rectangle2D;
+import java.awt.geom.Area;
 import java.awt.image.BufferedImage;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -28,18 +27,16 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
-import static com.youngdev.shooter.EnemyBolt.calcColorParameter;
 import static java.awt.event.KeyEvent.*;
 
+@SuppressWarnings("IntegerDivisionInFloatingPointContext")
 public class Main extends Game {
     public static Main main;
 
     public static int chunkSize = 128;
-    public int flyCounter;
-    private DataInputStream inputStreamReader;
-    private DataOutputStream outputStreamWriter;
+    public int flySoundCounter;
+    public int coinSoundCounter;
     private int hoverChunkX, hoverChunkY;
     private static int chunkXTopLeft;
     private static int chunkYTopLeft;
@@ -67,20 +64,24 @@ public class Main extends Game {
     private Cursor cursor;
     static Color grassColor = new Color(80, 140, 110);
     public Player player;
-    public List<GameObject> addEntities;
-    public List<GameObject> entities;
+    List<GameObject> entities;
+    Mask.Rectangle visibleAreaMask;
     List<GameObject> coins;
     private List<GameObject> structuralBlocks,visibleChunkObjectsTemp;
-    public List<Fly> flies;
-    public SoundManager soundManager;
+    List<Fly> flies;
+    SoundManager soundManager;
     private boolean[] startMenuButtons_prevHover;
     private boolean startMenuModePrev;
-    public int flySounds;
+    int flySounds;
     private int tick;
+    private Area onScreenPuddles;
+    private ArrayList<Vec3d> puddleWaves;
+    UI ui;
 
     // *** SOUNDS ***
     private Clip noise;
     private Clip music;
+    private PuddleRenderer puddleRenderer;
 
     public static void main(String[] args) {
         new Main();
@@ -121,10 +122,16 @@ public class Main extends Game {
         buttonPrevInside = new boolean[numButtons];
 
         playerEntities = new ArrayList<>();
+        visibleAreaMask = null;
+        onScreenPuddles = new Area();
+        coinSoundCounter = 0;
 
         startMenuMode = true;
         flySounds = 5;
-        flyCounter = 0;
+        flySoundCounter = 0;
+
+        puddleWaves = new ArrayList<>();
+        puddleRenderer = new PuddleRenderer();
 
         soundManager = new SoundManager();
         loadSounds();
@@ -137,6 +144,7 @@ public class Main extends Game {
         fonts.add("press-start.regular.ttf");
         fonts.add("Nunito-Bold.ttf");
         fonts.add("Nunito-Light.ttf");
+        fonts.add("Romantiques.ttf");
 
         for(String name : fonts) {
             try {
@@ -168,7 +176,7 @@ public class Main extends Game {
         visibleChunkObjectsTemp = Collections.synchronizedList(new ArrayList<>());
         flies = Collections.synchronizedList(new ArrayList<>());
         structuralBlocks = Collections.synchronizedList(new ArrayList<>());
-        addEntities = Collections.synchronizedList(new ArrayList<>());
+        List<GameObject> addEntities = Collections.synchronizedList(new ArrayList<>());
         coins = Collections.synchronizedList(new ArrayList<>());
         findOnScreenBlocked = false;
         findOnScreenCalled = false;
@@ -186,22 +194,30 @@ public class Main extends Game {
         g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
         g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
 
-        // HERE: Pre-Render game logo
-        gameLogo = RenderUtils.createImage(e.width, 48, false);
-        Graphics2D g2 = (Graphics2D) gameLogo.getGraphics();
-        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
-                RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
-
         Container contentPane = e.getWindow().getFrame().getContentPane();
         contentPane.setCursor(contentPane.getToolkit().createCustomCursor(
                 new BufferedImage( 1, 1, BufferedImage.TYPE_INT_ARGB ),
                 new Point(),
                 null ));
 
-        String text = "DuleKiva";
+        // HERE: Pre-Render game logo
 
-//        g2.setColor(new Color());
-//        g2.fill;
+        // Old text based logo
+        BufferedImage loadedLogo = new Image("/dulekiva.png").getImage();
+        double newHeight = 64;
+        double newWidth = (double)loadedLogo.getWidth() /
+                (double)loadedLogo.getHeight() * newHeight;
+        java.awt.Image logo = loadedLogo.getScaledInstance((int)newWidth,
+                (int)newHeight, java.awt.Image.SCALE_FAST);
+        gameLogo = new BufferedImage((int)newWidth, (int)newHeight,
+                BufferedImage.TYPE_INT_ARGB);
+        gameLogo.getGraphics().drawImage(logo, 0,0, null);
+        /* gameLogo = RenderUtils.createImage(e.width, 48, false);
+        Graphics2D g2 = (Graphics2D) gameLogo.getGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
+                RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
+
+        String text = "DuleKiva";
         GradientPaint gradientPaint = new GradientPaint(0, 0, grassColor,
                 0, gameLogo.getHeight(), new Color(
                         grassColor.getRed(),
@@ -220,7 +236,7 @@ public class Main extends Game {
 
         g2.setColor(Color.black);
         g2.drawString(text, (int)(gameLogo.getWidth()-textBounds.getWidth())/2,
-                32);
+                32);*/
 
         startMenuButtonParticles = new ArrayList<>();
 
@@ -241,6 +257,8 @@ public class Main extends Game {
 
             buttonImages[i] = image;
         }
+
+        ui = new UI();
 
         music = soundManager.playSound("startMenuMusic", Clip.LOOP_CONTINUOUSLY, -15f);
         noise = soundManager.playSound("noise", Clip.LOOP_CONTINUOUSLY, 0f);
@@ -278,7 +296,16 @@ public class Main extends Game {
 
         soundManager.addClip("sounds/tapping.wav", "branchesTouched");
 
-        soundManager.addClip("sounds/explosion.wav", "explosion");
+        soundManager.addClip("sounds/open.wav", "open");
+
+        soundManager.addClip("sounds/footsteps/puddle1.wav", "puddle0");
+        soundManager.addClip("sounds/footsteps/puddle2.wav", "puddle1");
+        soundManager.addClip("sounds/footsteps/puddle3.wav", "puddle2");
+        soundManager.addClip("sounds/footsteps/puddle4.wav", "puddle3");
+        soundManager.addClip("sounds/footsteps/puddle5.wav", "puddle4");
+
+        soundManager.addClip("sounds/pickup.wav", "pickup");
+        soundManager.addClip("sounds/nextWave.wav", "nextWave");
     }
 
     public void deleteChunk(int x, int y) {
@@ -294,7 +321,7 @@ public class Main extends Game {
         int minX = x*chunkSize;
         int minY = y*chunkSize;
 
-        if(random.nextInt(10) == 0 || true) {
+        if(random.nextInt(10) == 0) {
             chunkEntities.add(new DuleKiva(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY));
         }
 
@@ -318,7 +345,7 @@ public class Main extends Game {
         }
 
         if(random.nextInt(4)==1) {
-            chunk.add(new Trash(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY, random.nextInt(2)+2));
+            chunk.add(new Puddle(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY, random.nextInt(2)+2));
         }
 
         if(random.nextInt(8)==1) {
@@ -382,6 +409,14 @@ public class Main extends Game {
             chunks.put(loc, new ArrayList<>());
         }
         return chunks.get(loc);
+    }
+
+    public HashSet<WorldObject> getChunkEntitiesArray(int x, int y) {
+        Point loc = new Point(x, y);
+        if(!chunkEntities.containsKey(loc)) {
+            chunkEntities.put(loc, new HashSet<>());
+        }
+        return chunkEntities.get(loc);
     }
 
     public ArrayList<GameObject> getAndGenerateChunk(int x, int y) {
@@ -459,36 +494,64 @@ public class Main extends Game {
     }
 
     void findOnScreenObjects() {
+        int chunkXTopLeft = Math.floorDiv(e.getRenderer().getCamX(), chunkSize);
+        int chunkYTopLeft = Math.floorDiv(e.getRenderer().getCamY(), chunkSize);
+        @SuppressWarnings("IntegerDivisionInFloatingPointContext")
+        int chunkXBottomRight = (int)Math.ceil(chunkXTopLeft +e.width/ chunkSize);
+        @SuppressWarnings("IntegerDivisionInFloatingPointContext")
+        int chunkYBottomRight = (int)Math.ceil(chunkYTopLeft +e.height/ chunkSize);
+        /*
+        Should work aswell
         int chunkXTopLeft = (int)Math.floor(camera.cX/(double)chunkSize);
         int chunkYTopLeft = (int)Math.floor(camera.cY/(double)chunkSize);
         int chunkXBottomRight = (int)Math.ceil((e.width+camera.cX)/(double)chunkSize);
         int chunkYBottomRight = (int)Math.ceil((e.height+camera.cY)/(double)chunkSize);
+        */
+
+        Mask.Rectangle visibleAreaMask_BufferZone = new Mask.Rectangle(
+                e.getRenderer().getCamX()-chunkSize,
+                e.getRenderer().getCamY()-chunkSize,
+                e.getRenderer().getCamX()+e.width+chunkSize,
+                e.getRenderer().getCamY()+e.height+chunkSize);
 
         collisionMap.empty();
         ArrayList<GameObject> visibleChunksObjectsTemporary = new ArrayList<>();
         ArrayList<GameObject> addQueue = new ArrayList<>();
+        visibleChunkEntities.clear();
         if(!startMenuMode) {
             addQueue.add(player);
         }
+        addQueue.add(puddleRenderer);
 
         // HERE: Add additional ones that are partly on screen
-        Mask.Rectangle visibleAreaMask = new Mask.Rectangle(
-                e.getRenderer().getCamX(),
-                e.getRenderer().getCamY(),
-                e.getRenderer().getCamX()+e.width,
-                e.getRenderer().getCamY()+e.height);
         for(int xx = chunkXTopLeft-4; xx < chunkXBottomRight+4; xx++) {
             for(int yy = chunkYTopLeft-4; yy < chunkYBottomRight+4; yy++) {
                 ArrayList<GameObject> chunk = getChunkArray(xx, yy);
                 GameObject obj;
                 for(int j = chunk.size()-1; j >= 0; j--) {
                     obj = chunk.get(j);
-                    if(visibleAreaMask.isColliding(obj.mask)) {
+                    if(obj.mask instanceof Mask.Rectangle &&
+                            visibleAreaMask.isColliding(obj.mask)) {
+                        addQueue.add(obj);
+                    }
+                    if(obj.aabbComponent != null) {
+                        if(obj.aabbComponent.area instanceof Mask.Rectangle &&
+                                obj.aabbComponent.area.isColliding(
+                                visibleAreaMask_BufferZone)) {
+                            collisionMap.add(obj.aabbComponent);
+                        }
+                    }
+                    /*if((obj.mask instanceof Mask.Rectangle &&
+                            visibleAreaMask.isColliding(obj.mask)) ||
+                            (obj.aabbComponent != null &&
+                            obj.aabbComponent.area instanceof
+                            Mask.Rectangle && visibleAreaMask.
+                            isColliding(obj.aabbComponent.area))) {
                         addQueue.add(obj);
                         if(obj.aabbComponent != null) {
                             collisionMap.add(obj.aabbComponent);
                         }
-                    }
+                    }*/
                 }
             }
         }
@@ -496,28 +559,37 @@ public class Main extends Game {
             for(int yy = chunkYTopLeft-4; yy < chunkYBottomRight+4; yy++) {
                 HashSet<WorldObject> chunk = chunkEntities.
                         get(new Point(xx, yy));
-                chunk.removeIf(obj -> {
-                    if((obj.mask != null && isPixelOnScreen(
-                            (int)obj.x, (int)obj.y, 4)) ||
-                            (obj.mask instanceof Mask.Rectangle
-                                    && visibleAreaMask.
-                                    isColliding(obj.mask))) {
+                if(chunk != null) chunk.removeIf(obj -> {
+                    if((obj.mask instanceof Mask.Rectangle &&
+                            visibleAreaMask.isColliding(obj.mask)) ||
+                            (obj.aabbComponent != null &&
+                            obj.aabbComponent.area instanceof
+                            Mask.Rectangle && obj.aabbComponent.area.
+                                    isColliding(visibleAreaMask))) {
                         addQueue.add(obj);
+                        visibleChunkEntities.add(obj);
                     }
                     return obj.dead;
                 });
             }
         }
 
-        for (GameObject obj : coins) {
+        Iterator<GameObject> iterator = coins.iterator();
+        for (;iterator.hasNext();) {
+            GameObject obj = iterator.next();
             Point chunkLoc = getChunkLocation((int) obj.x, (int) obj.y);
-            if (isOnScreen(chunkLoc.x, chunkLoc.y, 1)) {
+            if (visibleAreaMask.isColliding((int)obj.x, (int)obj.y)) {
                 addQueue.add(obj);
+//                if(obj instanceof WorldObject)
+//                    visibleChunkEntities.add((WorldObject) obj);
+            } else {
+                iterator.remove();
             }
         }
 
         structuralBlocks.forEach(o -> {
-            if(o.mask.isColliding(visibleAreaMask)) {
+            if(o.mask instanceof Mask.Rectangle &&
+                    o.mask.isColliding(visibleAreaMask)) {
                 addQueue.add(o);
                 if(o.aabbComponent != null)
                     collisionMap.add(o.aabbComponent);
@@ -542,6 +614,11 @@ public class Main extends Game {
         return new Point(x/chunkSize, y/chunkSize);
     }
 
+    public void createWave(double x, double y) {
+        puddleWaves.add(new Vec3d(x, y, 0));
+    }
+
+    @SuppressWarnings("IntegerDivisionInFloatingPointContext")
     @Override
     public void update(Core core) {
         Input i = core.getInput();
@@ -549,21 +626,17 @@ public class Main extends Game {
         tick++;
         if(tick > 59) {
             tick = 0;
-
-            // TODO: Do something every 1 second
-            flyCounter = 0;
+            flySoundCounter = 0;
         }
 
         if(startMenuMode) {
-            camera.bluishEffect = 0f;
+            camera.bluishEffect = 1f;
             int x = core.getInput().getMouseX();
             int y = core.getInput().getMouseY();
-//            int alphaSpeed = 12;
             for(int k = 0; k < numButtons; k++) {
                 int xx = 16;
                 int yy = 64+32*k;
                 boolean inside = false;
-//                if(AdvancedMath.inRange(x, y, xx, yy, 192, 24)) {
                 if(AdvancedMath.inRange(x, y, 0, yy, width, 24)) {
                     inside = true;
 
@@ -572,7 +645,7 @@ public class Main extends Game {
                                 i.getMouseX(), 1d, 1d));
 
                     if(!startMenuButtons_prevHover[k]) {
-                        soundManager.playSound("buttonHover", 0.5f);
+                        soundManager.playSound("buttonHover");
                     }
 
                     if(i.isButtonDown(1)) {
@@ -580,13 +653,12 @@ public class Main extends Game {
                             // TODO: Start the game
                             startMenuMode = false;
                         }
-                        soundManager.playSound("buttonPress", 0.5f);
+                        soundManager.playSound("buttonPress");
                     }
                     startMenuButtons_prevHover[k] = true;
                 } else {
                     startMenuButtons_prevHover[k] = false;
                 }
-//                cursor.visible = !found;
                 Iterator iterator = buttonHoverVectors[k].iterator();
                 for(;iterator.hasNext();) {
                     Object obj = iterator.next();
@@ -600,7 +672,6 @@ public class Main extends Game {
                         }
                     }
                 }
-//                System.out.println("size = " + buttonHoverVectors[k].size());
             }
 
             startMenuButtonParticles.removeIf(p -> {
@@ -611,58 +682,46 @@ public class Main extends Game {
                     return false;
                 }
             });
+        } else {
+            ui.update(i);
         }
 
+        // ### Calculate visible chunks' boundaries ###
+        chunkXTopLeft = (int)Math.floor((int)camera.cX/ chunkSize);
+        chunkYTopLeft = (int)Math.floor((int)camera.cY/ chunkSize);
+        chunkXBottomRight = (int)Math.ceil((int)(e.width+camera.cX)/ chunkSize);
+        chunkYBottomRight = (int)Math.ceil((int)(e.height+camera.cY)/ chunkSize);
+
+        // ### Create mask, generate & load terrain ###
+        visibleAreaMask = new Mask.Rectangle(
+                e.getRenderer().getCamX(),
+                e.getRenderer().getCamY(),
+                e.getRenderer().getCamX()+e.width,
+                e.getRenderer().getCamY()+e.height);
+        for (int xx = chunkXTopLeft - 4; xx < chunkXBottomRight + 4; xx++) {
+            for (int yy = chunkYTopLeft - 4; yy < chunkYBottomRight + 4; yy++) {
+                if (getChunkArray(xx, yy).size() == 0) {
+                    generateChunk(xx, yy);
+                }
+            }
+        }
+        findOnScreenObjects();
+
+        // ### - ###
         while(!moveChunkEntities.isEmpty()) {
             MoveTo move = moveChunkEntities.pollFirst();
             if(move != null) {
-                chunkEntities.get(new Point(move.fromX, move.fromY)).
+                getChunkEntitiesArray(move.fromX, move.fromY).
                         remove(move.targetObject);
-                chunkEntities.get(new Point(move.toX, move.toY)).
+                getChunkEntitiesArray(move.toX, move.toY).
                         add(move.targetObject);
             }
         }
-
-//        entities.addAll(addEntities);
-//        addEntities.clear();
-
-        findOnScreenBlocked = true;
-
-        int prevCamX = core.getRenderer().getCamX();
-        int prevCamY = core.getRenderer().getCamY();
 
         coins.removeIf(o -> {
             if(!o.dead) o.update(i);
             return o.dead;
         });
-
-        /*Iterator<Fly> it = flies.iterator();
-        while(it.hasNext()) {
-            Fly fly = it.next();
-
-            if(!isPixelOnScreen((int)fly.x, (int)fly.y, 4)) {
-                fly.dead = true;
-            }
-
-            if(fly.dead) {
-                it.remove();
-            } else {
-                fly.update(core.getInput());
-            }
-        }*/
-
-        /*Iterator<GameObject> it2 = entities.iterator();
-        while(it2.hasNext()) {
-            GameObject entity = it2.next();
-            entity.dead = entity.dead ||
-                    !isPixelOnScreen((int)entity.x,
-                            (int)entity.y, 10);
-            if(entity.dead) {
-                it2.remove();
-            } else {
-                entity.update(core.getInput());
-            }
-        }*/
 
         Iterator<Player> it3 = playerEntities.iterator();
         while(it3.hasNext()) {
@@ -674,162 +733,57 @@ public class Main extends Game {
             }
         }
 
+        /*puddleWaves.removeIf(wave -> {
+            wave.z += 0.0125;
+            return wave.z > 1;
+        });*/
+
+//        onScreenPuddles.reset();
         if(!startMenuMode)
             player.update(core.getInput());
+
+        // ### Update Objects ###
         Iterator<GameObject> it4;
         for(it4 = Main.main.visibleChunkObjects.iterator(); it4.hasNext();) {
             GameObject obj = it4.next();
             if(obj == player) continue;
             if(obj instanceof WorldObject) {
-                if (!(obj instanceof Tree) && !(obj instanceof Rocks)) {
+                if(obj instanceof Puddle) {
                     obj.update(core.getInput());
+//                    onScreenPuddles.add(((Puddle)obj).area);
+                } else if (!(obj instanceof Tree) && !(obj instanceof Rocks)) {
+                    double prevX = obj.x;
+                    double prevY = obj.y;
+                    obj.update(core.getInput());
+                    ((WorldObject) obj).checkLocation(prevX, prevY);
                 }
             }
         }
+
+        // ### Update Entities ###
         Iterator<WorldObject> it5;
         for(it5 = Main.main.visibleChunkEntities.iterator(); it5.hasNext();) {
             WorldObject obj = it5.next();
-            if(obj == player) continue;
-            double prevX = obj.x;
-            double prevY = obj.y;
-            obj.update(core.getInput());
-            obj.checkLocation(prevX, prevY);
+            if(obj instanceof Rabbit || obj instanceof Coin) {
+                if(onScreenPuddles.contains(obj.x, obj.y)) {
+                    createWave(obj.x, obj.y);
+                }
+            }
         }
+
         cursor.update(i);
-
-        e.getWindow().getFrame().setTitle("Codename SHOOTER - FPS: "+e.getFps());
-
-//        player.update(i);
-
+        e.getWindow().getFrame().setTitle("DuleKiva  FPS: "+e.getFps());
         camera.update();
         camera.apply(core.getRenderer());
-        chunkXTopLeft = (int)Math.floor(camera.cX/(double)chunkSize);
-        chunkYTopLeft = (int)Math.floor(camera.cY/(double)chunkSize);
-        chunkXBottomRight = (int)Math.ceil((e.width+camera.cX)/(double)chunkSize);
-        chunkYBottomRight = (int)Math.ceil((e.height+camera.cY)/(double)chunkSize);
 
-        // HERE: Gather together all chunks that are visible
-        // HERE: and put them to visibleChunkObjects
 
         if(i.isKeyDown(VK_F2)) {
             showDebugInfo = !showDebugInfo;
         }
 
-        if(i.isKeyDown(VK_F1)) {
-            camera.target = player;
-        }
-
-        if(i.isKeyDown(VK_F6)) {
-            int centerX = e.getRenderer().getCamX()+width/2;
-            int centerY = e.getRenderer().getCamY()+height/2;
-
-            int chunkX1 = (centerX-8192)/chunkSize;
-            int chunkY1 = (centerY-8192)/chunkSize;
-            int chunkX2 = (centerX+8192)/chunkSize;
-            int chunkY2 = (centerY+8192)/chunkSize;
-
-            for(int j = chunkY1; j < chunkY2; j++) {
-                for(int k = chunkX1; k < chunkX2; k++) {
-                    generateChunk(k, j);
-                }
-            }
-        }
-
         if(i.isKeyDown(VK_F5)) {
-            // HERE: Take a "Mega" screenshot
-            BufferedImage image = new BufferedImage(24*chunkSize,
-                    16*chunkSize, BufferedImage.TYPE_INT_RGB);
-            Renderer r = new Renderer(image.getGraphics(), image.getWidth(), image.getHeight());
-            r.absolute();
-            r.fillRectangle(0, 0, image.getWidth(), image.getHeight(), grassColor);
-
-            int centerX = e.getRenderer().getCamX()+width/2;
-            int centerY = e.getRenderer().getCamY()+height/2;
-
-            int chunkX1 = (centerX)/chunkSize-12;
-            int chunkY1 = (centerY)/chunkSize-8;
-            int chunkX2 = (centerX)/chunkSize+12;
-            int chunkY2 = (centerY)/chunkSize+8;
-
-            r.relative();
-            r.setCamX( chunkX1*chunkSize);
-            r.setCamY( chunkY1*chunkSize);
-            r.relative();
-
-            ArrayList<GameObject> objects = new ArrayList<>();
-
-            for(int j = chunkY1; j < chunkY2; j++) {
-                for(int k = chunkX1; k < chunkX2; k++) {
-                    objects.addAll(getAndGenerateChunk(k, j));
-//                    .forEach(o -> o.render(r));
-                }
-            }
-
-            Mask.Rectangle area = new Mask.Rectangle(chunkX1*chunkSize, chunkY1*chunkSize,
-                    (chunkX2-chunkX1)*chunkSize, (chunkY2-chunkY1)*chunkSize);
-
-            for(GameObject entity : entities) {
-                if(entity.mask.isColliding(area)) {
-                    objects.add(entity);
-//                    entity.render(r);
-                }
-            }
-
-
-            objects.sort(Comparator.comparingInt((o) -> o.depth));
-            objects.forEach(o -> o.render(r));
-
-            JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setMultiSelectionEnabled(false);
-            fileChooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
-            fileChooser.setFileFilter(new FileFilter() {
-                @Override
-                public boolean accept(File f) {
-                    return f.isDirectory() || f.getName().endsWith(".png");
-                }
-
-                @Override
-                public String getDescription() {
-                    return "PNG";
-                }
-            });
-            fileChooser.showSaveDialog(e.getWindow().getFrame());
-            File file = fileChooser.getSelectedFile();
-            if(file != null) {
-                try {
-                    if(!file.getName().contains(".")) {
-                        file = new File(file.getAbsolutePath()+".png");
-                    }
-                    ImageIO.write(image, "PNG", file);
-                } catch (IOException e1) {
-                    e1.printStackTrace();
-                }
-            }
-
-            JOptionPane.showMessageDialog(e.getWindow().getFrame(), "Image saved");
+            takeMegaScreenshot();
         }
-
-        if(i.isKeyDown(VK_F3)) {
-            for(GameObject obj : entities) {
-                if(obj.mask.isColliding(i.getRelativeMouseX(), i.getRelativeMouseY())) {
-                    camera.target = obj;
-                }
-            }
-        }
-
-        if(i.isKeyDown(VK_F4)) {
-            entities.clear();
-        }
-
-        if(i.isButtonDown(2)) {
-//            Arrow arrow = new Arrow(i.getRelativeMouseX(), i.getRelativeMouseY(),
-//                    (int)Fly.angle(i.getRelativeMouseX(), i.getRelativeMouseY(), player.x, player.y)-180);
-//            arrow.shotByFriendly = false;
-            GameObject bunny = new Rabbit(i.getRelativeMouseX(), i.getRelativeMouseY());
-            entities.add(bunny);
-//            camera.target = bunny;
-        }
-
 
         if(i.isKeyDown(VK_F3) && showDebugInfo) {
             usesChunkRenderer = !usesChunkRenderer;
@@ -838,46 +792,6 @@ public class Main extends Game {
         hoverChunkX=i.getRelativeMouseX()/chunkSize;
         hoverChunkY=i.getRelativeMouseY()/chunkSize;
 
-        /*if(i.isButtonDown(1) && showDebugInfo && (isServer || startMenuMode)) {
-            // HERE: Generate selected chunk
-            deleteChunk(hoverChunkX, hoverChunkY);
-            generateChunk(hoverChunkX, hoverChunkY);
-        }*/
-
-//        findOnScreenObjects();
-//        int moveX = (i.isKey(VK_D) ? 1 : 0)*8 - (i.isKey(VK_A) ? 1 : 0)*8;
-//        int moveY = (i.isKey(VK_S) ? 1 : 0)*8 - (i.isKey(VK_W) ? 1 : 0)*8;
-//
-//        core.getRenderer().setCamX(core.getRenderer().getCamX()+moveX);
-//        core.getRenderer().setCamY(core.getRenderer().getCamY()+moveY);
-
-
-        // HERE: Generate new chunks
-        if(prevCamX != core.getRenderer().getCamX() || prevCamY != core.getRenderer().getCamY()) {
-//            findOnScreenObjects();
-            for (int xx = chunkXTopLeft - 4; xx < chunkXBottomRight + 4; xx++) {
-                for (int yy = chunkYTopLeft - 4; yy < chunkYBottomRight + 4; yy++) {
-                    if (getChunkArray(xx, yy).size() == 0) {
-                        generateChunk(xx, yy);
-                    }
-                }
-            }
-        }
-
-//        findOnScreenBlocked = false;
-//        if(findOnScreenCalled)
-        findOnScreenObjects();
-
-        if(!startMenuMode) {
-            player.castRays();
-        }
-
-
-        /*
-            if(!startMenuModePrev) {
-                if(!music.isRunning()) music.start();
-                if(noise.isRunning()) noise.stop();
-            }*/
         if(startMenuModePrev != startMenuMode) {
             if(startMenuMode) {
                 // HERE: Go to start menu mode
@@ -891,6 +805,7 @@ public class Main extends Game {
                 music.loop(Clip.LOOP_CONTINUOUSLY);
             } else {
                 // HERE: Exit start menu mode
+                camera.bitCrushEffect = 0.5f;
                 cursor.visible = true;
                 chunks.clear();
                 visibleChunkObjects.clear();
@@ -903,10 +818,80 @@ public class Main extends Game {
             }
         }
         startMenuModePrev = startMenuMode;
+    }
 
-        if(entities.size() > 0) {
-            System.out.println(entities.size());
+    private void takeMegaScreenshot() {
+        // HERE: Take a "Mega" screenshot
+        BufferedImage image = new BufferedImage(24*chunkSize,
+                16*chunkSize, BufferedImage.TYPE_INT_RGB);
+        Renderer r = new Renderer(image.getGraphics(), image.getWidth(), image.getHeight());
+        r.absolute();
+        r.fillRectangle(0, 0, image.getWidth(), image.getHeight(), grassColor);
+
+        int centerX = e.getRenderer().getCamX()+width/2;
+        int centerY = e.getRenderer().getCamY()+height/2;
+
+        int chunkX1 = (centerX)/chunkSize-12;
+        int chunkY1 = (centerY)/chunkSize-8;
+        int chunkX2 = (centerX)/chunkSize+12;
+        int chunkY2 = (centerY)/chunkSize+8;
+
+        r.relative();
+        r.setCamX( chunkX1*chunkSize);
+        r.setCamY( chunkY1*chunkSize);
+        r.relative();
+
+        ArrayList<GameObject> objects = new ArrayList<>();
+
+        for(int j = chunkY1; j < chunkY2; j++) {
+            for(int k = chunkX1; k < chunkX2; k++) {
+                objects.addAll(getAndGenerateChunk(k, j));
+//                    .forEach(o -> o.render(r));
+            }
         }
+
+        Mask.Rectangle area = new Mask.Rectangle(chunkX1*chunkSize, chunkY1*chunkSize,
+                (chunkX2-chunkX1)*chunkSize, (chunkY2-chunkY1)*chunkSize);
+
+        for(GameObject entity : entities) {
+            if(entity.mask.isColliding(area)) {
+                objects.add(entity);
+//                    entity.render(r);
+            }
+        }
+
+
+        objects.sort(Comparator.comparingInt((o) -> o.depth));
+        objects.forEach(o -> o.render(r));
+
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setMultiSelectionEnabled(false);
+        fileChooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+        fileChooser.setFileFilter(new FileFilter() {
+            @Override
+            public boolean accept(File f) {
+                return f.isDirectory() || f.getName().endsWith(".png");
+            }
+
+            @Override
+            public String getDescription() {
+                return "PNG";
+            }
+        });
+        fileChooser.showSaveDialog(e.getWindow().getFrame());
+        File file = fileChooser.getSelectedFile();
+        if(file != null) {
+            try {
+                if(!file.getName().contains(".")) {
+                    file = new File(file.getAbsolutePath()+".png");
+                }
+                ImageIO.write(image, "PNG", file);
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+        }
+
+        JOptionPane.showMessageDialog(e.getWindow().getFrame(), "Image saved");
     }
 
     public static int toSlowMotion(int amount) {
@@ -923,9 +908,72 @@ public class Main extends Game {
 
         r.absolute();
 
-        Filter passThrough = (newC, oldC) -> newC;
+        Filter duleKivaEffect = (newC, oldC) -> {
+            if (camera.bluishEffect == 1f &&
+                    camera.bitCrushEffect == 0f &&
+                    camera.blackAndWhiteEffect == 0f) return newC;
 
-        r.setFilter(0, passThrough);
+            Color result = newC;
+
+            if (camera.bluishEffect < 1f) {
+                double resultRed;
+                double resultGrn;
+                double resultBlu;
+
+                double newRed = newC.getRed() / 255d;
+                double newGrn = newC.getGreen() / 255d;
+                double newBlu = newC.getBlue() / 255d;
+
+                resultRed = AdvancedMath.setRange(
+                        newRed * camera.bluishEffect, 0d, 1d);
+                resultGrn = AdvancedMath.setRange(
+                        newGrn * camera.bluishEffect, 0d, 1d);
+                resultBlu = AdvancedMath.setRange(
+                        newBlu, 0d, 1d);
+
+                result = new Color((int) (resultRed * 255d),
+                        (int) (resultGrn * 255d),
+                        (int) (resultBlu * 255d), newC.getAlpha());
+            }
+
+            if ((int) (camera.bitCrushEffect * 255d) > 0) {
+                int divider = (int) (camera.bitCrushEffect * 255d);
+                double newRed = (newC.getRed() / divider);
+                double newGrn = (newC.getGreen() / divider);
+                double newBlu = (newC.getBlue() / divider);
+
+                result = new Color((int) (newRed * divider * (1 - camera.bitCrushEffect)),
+                        (int) (newGrn * divider * (1 - camera.bitCrushEffect)),
+                        (int) (newBlu * divider * (1 - camera.bitCrushEffect)), newC.getAlpha());
+            }
+
+            if (camera.blackAndWhiteEffect > 0) {
+                double red = result.getRed();
+                double grn = result.getGreen();
+                double blu = result.getBlue();
+                double blcAndWhtRslt = (red + grn + blu) / 3d;
+
+                double oldRed = result.getRed();
+                double oldGrn = result.getGreen();
+                double oldBlu = result.getBlue();
+
+                double fxInverted = 1d - camera.blackAndWhiteEffect;
+                double fx = camera.blackAndWhiteEffect;
+
+                int rsltRed = (int) StrictMath.round((fxInverted * oldRed) +
+                        StrictMath.min(fx * blcAndWhtRslt * 0.8d, 255d));
+                int rsltGrn = (int) StrictMath.round((fxInverted * oldGrn) +
+                        StrictMath.min(fx * blcAndWhtRslt, 255d));
+                int rsltBlu = (int) StrictMath.round((fxInverted * oldBlu) +
+                        StrictMath.min(fx * blcAndWhtRslt * 0.7d, 255d));
+
+                result = new Color(rsltRed, rsltGrn, rsltBlu);
+            }
+
+            return result;
+        };
+
+        r.setFilter(0, duleKivaEffect);
 
         r.setClip(0, 0, e.width, e.height);
 
@@ -938,21 +986,32 @@ public class Main extends Game {
         // ╔════════════════════════════╗
         // ║ R E N D E R    C H U N K S ║
         // ╚════════════════════════════╝
+        long startingTime = System.nanoTime();
         if (usesChunkRenderer) {
             // HERE: Render only visible chunks
-            Iterator<GameObject> it1;
-            for (it1 = Main.main.visibleChunkObjects.iterator(); it1.hasNext(); ) {
-                it1.next().render(r);
+            GameObject obj;
+            Mask.Rectangle screen = new Mask.Rectangle(
+                    r.getCamX(), r.getCamY(), e.width, e.height);
+            int size = visibleChunkObjects.size();
+            for (int i = 0; i < size; i++) {
+                obj = visibleChunkObjects.get(i);
+                if(obj.mask instanceof Mask.Rectangle &&
+                        obj.mask.isColliding(screen)) obj.render(r);
             }
+//            Iterator<GameObject> it1;
+//            for (it1 = Main.main.visibleChunkObjects.iterator(); it1.hasNext(); ) {
+//                it1.next().render(r);
+//            }
         } else {
             // HERE: Render all chunks, temporally
             chunks.forEach((loc, chunk) -> chunk.forEach(obj -> obj.render(r)));
 //            flies.forEach(f -> f.render(r));
         }
+//        System.out.println(System.nanoTime()-startingTime);
 
-        r.setFont(new Font("Press Start Regular", Font.BOLD, 16));
-        r.drawText(String.valueOf((int) player.money), player.coinOverlayX, player.coinOverlayY - 32, 16,
-                Alignment.MIDDLE_CENTER, new Color(40, 250, 140, (int) player.coinOverlayAlpha));
+//        r.setFont(new Font("Press Start Regular", Font.BOLD, 16));
+//        r.drawText(String.valueOf((int) player.money), player.coinOverlayX, player.coinOverlayY - 32, 16,
+//                Alignment.MIDDLE_CENTER, new Color(40, 250, 140, (int) player.coinOverlayAlpha));
 
         r.absolute();
 
@@ -992,6 +1051,7 @@ public class Main extends Game {
         }
         r.relative();
         r.clearFilters();
+//        r.setFilter(0, duleKivaEffect);
 
 
         // ╔═══════════════════════════════════╗
@@ -999,7 +1059,8 @@ public class Main extends Game {
         // ╚═══════════════════════════════════╝
         if(startMenuMode) {
             r.absolute();
-            r.drawImage(0, 0, gameLogo);
+            r.drawImage((e.width-gameLogo.getWidth())/2d,
+                    0, gameLogo);
 
             // HERE: Render buttons
             int y = 64;
@@ -1022,10 +1083,31 @@ public class Main extends Game {
             }
             r.getG().setClip(clip);
             startMenuButtonParticles.forEach(p -> p.render(r));
+        } else {
+            r.absolute();
+            ui.render(r);
         }
 
         r.relative();
         cursor.render(r);
+
+    }
+
+    public void restart() {
+        chunks.clear();
+        chunkEntities.clear();
+        moveChunkEntities.clear();
+        visibleChunkEntities.clear();
+        visibleChunkObjects.clear();
+        player = new Player(e.getRenderer().getCamX()+e.width/2,
+                e.getRenderer().getCamY()+e.height/2);
+        camera.target = player;
+        camera.bitCrushEffect = 0.5f;
+        random.setSeed(random.nextLong());
+        camera.blackAndWhiteEffect = 0f;
+        slowMotionSpeed = 1f;
+        camera.bitCrushEffect = 1f;
+        camera.bluishEffect = 0f;
     }
 
     private class MoveTo {
@@ -1038,6 +1120,58 @@ public class Main extends Game {
             this.fromY = fromY;
             this.toX = toX;
             this.toY = toY;
+        }
+    }
+    private class PuddleRenderer extends WorldObject {
+        private Color color;
+        public PuddleRenderer() {
+            super(100, 0, 100);
+            this.depth = 2048;
+            color = new Color(150, 150, 230);
+            color = new Color(
+                    UniParticle.calcColorParameter(Main.grassColor.getRed(), color.getRed(), 0.25f),
+                    UniParticle.calcColorParameter(Main.grassColor.getGreen(), color.getGreen(), 0.25f),
+                    UniParticle.calcColorParameter(Main.grassColor.getBlue(), color.getBlue(), 0.25f)
+            );
+        }
+
+        @Override
+        public void update(Input input) {
+
+        }
+
+        @Override
+        public void render(Renderer r) {
+            // Backup and set new properties
+            Graphics2D g2d = (Graphics2D)r.getG();
+            Shape oldClip = g2d.getClip();
+            g2d.translate(-r.getCamX(), -r.getCamY());
+            g2d.setClip(onScreenPuddles);
+            g2d.translate(r.getCamX(), r.getCamY());
+
+            // Draw waves
+            puddleWaves.forEach(wave -> {
+                Color waveColor = Color.white;
+//            Color waveColor = new Color(192, 192, 255);
+                r.fillCircle(wave.x, wave.y, (int)(wave.z*96), new Color(
+                        UniParticle.calcColorParameter(color.getRed(), waveColor.getRed(), 0.1f*(1f-(float) wave.z)),
+                        UniParticle.calcColorParameter(color.getGreen(), waveColor.getGreen(), 0.1f*(1f-(float) wave.z)),
+                        UniParticle.calcColorParameter(color.getBlue(), waveColor.getBlue(), 0.1f*(1f-(float) wave.z))
+                ));
+            });
+
+            // Restore the previous properties
+            g2d.setClip(oldClip);
+        }
+
+        @Override
+        public String shareSend() {
+            return null;
+        }
+
+        @Override
+        public void shareReceive(String s) {
+
         }
     }
 }

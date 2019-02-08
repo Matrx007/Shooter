@@ -20,18 +20,19 @@ public class Rocks extends WorldObject {
         this.y = y;
         this.solid = true;
 
-        // HERE: Fix depth
-        Random random = new Random();
-        this.depth = random.nextInt(1023)+depth*1024;
-
         rocks = new ArrayList<>();
-        int numRocks = random.nextInt(7)+10;
+        int numRocks = random.nextInt(15)+15;
         int smallestX=Integer.MAX_VALUE, smallestY=Integer.MAX_VALUE, largestX=Integer.MIN_VALUE, largestY=Integer.MIN_VALUE;
         for(int i = 0; i < numRocks; i++) {
-            // HERE: Create a leave
-            int xx = x-random.nextInt(24)+12;
-            int yy = y-random.nextInt(24)+12;
-            int size = random.nextInt(20)+4;
+            double gaussian = random.nextDouble();
+            double angle = random.nextInt(359);
+            double addX = Math.cos(Math.toRadians(angle))*
+                    Tree.calcGaussian(gaussian, 5)*24;
+            double addY = Math.sin(Math.toRadians(angle))*
+                    Tree.calcGaussian(gaussian, 5)*24d;
+            int xx = x + (int)Math.round(addX);
+            int yy = y + (int)Math.round(addY);
+            int size = random.nextInt(15)+15;
             rocks.add(new Piece(xx, yy, size, random.nextInt(8)*5));
 
             smallestX = Math.min(smallestX, (int)Math.floor(xx-size/2d));

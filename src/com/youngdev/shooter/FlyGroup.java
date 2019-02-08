@@ -1,6 +1,7 @@
 package com.youngdev.shooter;
 
 import com.engine.libs.game.GameObject;
+import com.engine.libs.game.Mask;
 import com.engine.libs.input.Input;
 import com.engine.libs.math.AdvancedMath;
 import com.engine.libs.rendering.Renderer;
@@ -28,7 +29,6 @@ public class FlyGroup extends WorldObject {
             int yyy = y + (int) (Math.sin(Math.toRadians(angle))*distance);
             flies.add(new Fly(xxx, yyy));
         }
-        this.depth = 15*1024+random.nextInt(1024);
     }
 
     public FlyGroup(int x, int y, int numFlies, boolean flyAway) {
@@ -93,9 +93,17 @@ public class FlyGroup extends WorldObject {
 
         // ###### SEARCH FOR NEARBY ENTITIES #######
 
+        ArrayList<GameObject> nearEntities = new ArrayList<>();
+        for (GameObject entity : Main.main.visibleChunkEntities) {
+            if(entity.mask instanceof Mask.Rectangle &&
+                    entity.mask.isColliding(mask)) {
+                nearEntities.add(entity);
+            }
+        }
+
         boolean found = false;
-        Iterator<WorldObject> it;
-        for(it = Main.main.visibleChunkEntities.iterator(); it.hasNext();) {
+        Iterator<GameObject> it;
+        for(it = nearEntities.iterator(); it.hasNext();) {
             GameObject obj = it.next();
             if(obj instanceof Healable) {
                 if(AdvancedMath.inRange(obj.x, obj.y,

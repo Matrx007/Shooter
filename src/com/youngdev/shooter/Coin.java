@@ -1,6 +1,8 @@
 package com.youngdev.shooter;
 
 import com.engine.libs.game.Mask;
+import com.engine.libs.game.behaviors.AABBCollisionManager;
+import com.engine.libs.game.behaviors.AABBComponent;
 import com.engine.libs.input.Input;
 import com.engine.libs.rendering.Renderer;
 
@@ -9,16 +11,15 @@ import java.util.Random;
 
 public class Coin extends WorldObject {
 
-    public double speed, rotation, rotationSpeed, xD, yD, angle;
+    public double speed, rotation, rotationSpeed, xD, yD, angle, pickupSpeedAdd;
     public final int Type = 2;
     public boolean pickable;
+    private double multiplier;
+    private static long lastCoinPickupSound;
+    private AABBCollisionManager cm;
 
     public Coin(int x, int y, double angle) {
         super(2, 9, 2);
-
-        // HERE: Fix depth
-        Random random = new Random();
-        this.depth = random.nextInt(1023)+depth*1024;
 
         this.x = x;
         this.y = y;
@@ -26,51 +27,62 @@ public class Coin extends WorldObject {
         this.yD = y;
         this.angle = angle;
         this.pickable = false;
+        pickupSpeedAdd = 0;
 
 //        this.speed = 0;
+        this.multiplier = 0.9+random.nextDouble()/20;
         this.speed = random.nextDouble()*3+1d;
         this.rotationSpeed = 8;
         this.rotation = random.nextInt(359);
 
         this.mask = new Mask.Rectangle(x-8, y-8, 16, 16);
+        this.aabbComponent = new AABBComponent(this.mask);
+        cm = new AABBCollisionManager(this, Main.collisionMap);
     }
 
     @Override
     public void update(Input input) {
-        this.speed *= 0.9;
+        this.speed *= multiplier;
         this.rotationSpeed *= 0.95;
         this.rotation += rotationSpeed;
 
-        if(Fly.distance(xD, yD, Main.main.player.x, Main.main.player.y) < 24d && pickable) {
-            if(Fly.distance(xD, yD, Main.main.player.x, Main.main.player.y) < 4d) {
+        if(Fly.distance(xD, yD, Main.main.player.x, Main.main.player.y) < 32d && pickable) {
+            if(Fly.distance(xD, yD, Main.main.player.x, Main.main.player.y) < 8d) {
                 dead = true;
                 Main.main.player.lastCoinX = xD;
                 Main.main.player.lastCoinY = yD;
-                Main.main.player.coinOverlayAlpha = 255;
+                Main.main.player.coinOverlayAlpha = 1d;
                 Main.main.player.money += 2;
+                if(System.currentTimeMillis()-lastCoinPickupSound > 50) {
+                    lastCoinPickupSound = System.currentTimeMillis();
+                    Main.main.soundManager.playSound("pickup", 0f);
+                    Main.main.coinSoundCounter++;
+                }
             } else {
                 angle = Fly.angle(xD, yD, Main.main.player.x, Main.main.player.y)-180;
-                speed = 4d;
+                speed = 4d+pickupSpeedAdd;
+                pickupSpeedAdd += 0.025;
             }
         }
 
-        if(this.speed < 1) pickable = true;
+        if(this.speed < 0.25) pickable = true;
 
         double addX = Math.cos(Math.toRadians(angle))*speed;
         double addY = Math.sin(Math.toRadians(angle))*speed;
 
-        this.xD += addX;
-        this.yD += addY;
-
-        this.x = xD;
-        this.y = yD;
-
-        this.mask.move(addX, addY);
+        if(Main.collisionMap.collisionWithWhoExcept(
+                mask, aabbComponent).size() > 0) {
+            cm.unstuck();
+        } else {
+            cm.move(addX, addY);
+            xD = x;
+            yD = y;
+        }
     }
 
     @Override
     public void render(Renderer r) {
-//        r.fillRectangle(x, y, 8, 8, Color.yellow);
+//        r.fillRectangle(scoreX, scoreY, 8, 8, Color.yellow);
 
         int x1 = (int)(xD+Math.cos(Math.toRadians(rotation))*5d);
         int y1 = (int)(yD+Math.sin(Math.toRadians(rotation))*5d);

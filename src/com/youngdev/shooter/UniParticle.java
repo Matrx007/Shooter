@@ -269,8 +269,42 @@ public class UniParticle {
         }
     }
 
+    public static class ResizingProcess extends Process {
+        double size;
+        double start;
+        double end;
+        double step;
+
+        public ResizingProcess(double start, double end, double step) {
+            this.size = start;
+            this.start = start;
+            this.end = end;
+            this.step = step;
+        }
+
+        @Override
+        public void init() {
+
+        }
+
+        @Override
+        public void render(Renderer r) {
+
+        }
+
+        @Override
+        public void update() {
+            size -= Main.toSlowMotion(step);
+            if((end < start && size < end) ||
+                    (end > start && size > end)) {
+                owner.dead = true;
+            }
+            owner.size = (int)Math.round(size);
+        }
+    }
+
     public static int calcColorParameter(int colorBack, int colorFront, float alpha) {
-        return (int)(alpha * (float)colorFront) + (int)((1f - alpha) * (float)colorBack);
+        return (int)(alpha * (float)colorFront + (1f - alpha) * (float)colorBack);
     }
 
     public class UniParticleInstance extends GameObject {

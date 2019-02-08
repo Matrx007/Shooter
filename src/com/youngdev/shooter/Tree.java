@@ -16,7 +16,6 @@ public class Tree extends WorldObject {
 
     private ArrayList<Leaf> leaf;
     private ArrayList<Point[]> brunches;
-    private Random random;
     private ArrayList<Leaf2> leaf2s;
     private boolean prevCollision, fliesInside;
     public boolean collision;
@@ -36,10 +35,6 @@ public class Tree extends WorldObject {
 
         collision = false;
         leaf2s = new ArrayList<>();
-
-        // HERE: Fix depth
-        this.random = new Random();
-        this.depth = random.nextInt(1023)+20*1024;
 
         leaf = new ArrayList<>();
         brunches = new ArrayList<>();
@@ -126,8 +121,8 @@ public class Tree extends WorldObject {
                 break;
         }
 
-//        System.out.println("x = " + x);
-//        System.out.println("y = " + y);
+//        System.out.println("scoreX = " + scoreX);
+//        System.out.println("scoreY = " + scoreY);
 //        System.out.println("type = " + type);
 //        System.out.println("bounds = " + bounds);
 
@@ -135,7 +130,7 @@ public class Tree extends WorldObject {
             mask = new Mask.Rectangle((double) bounds.x, (double) bounds.y,
                     bounds.width, bounds.height);
             aabbComponent = new AABBComponent(new Mask.Rectangle(x-8, y-8, 16, 16));
-//            mask = new Mask.Rectangle(x-8, y-8, 16, 16);
+//            mask = new Mask.Rectangle(scoreX-8, scoreY-8, 16, 16);
         }
     }
 
@@ -149,7 +144,7 @@ public class Tree extends WorldObject {
             if (obj instanceof Arrow || (obj instanceof Healable && obj.depth > this.depth))
                 if(obj.mask != null)
                     if (obj.mask.isColliding(mask) ||
-                            Fly.distance(x, y, obj.x, obj.y) < 64) {
+                            Fly.distance(scoreX, scoreY, obj.scoreX, obj.scoreY) < 64) {
                         collision = true;
                         break;
                     }
@@ -164,8 +159,8 @@ public class Tree extends WorldObject {
                 if(fliesInside) {
                     if (spawn) {
                         for (int i = 0; i < random.nextInt(5) + 3; i++) {
-                            int xx = (int) x + random.nextInt(24) - 12;
-                            int yy = (int) y + random.nextInt(24) - 12;
+                            int xx = (int) scoreX + random.nextInt(24) - 12;
+                            int yy = (int) scoreY + random.nextInt(24) - 12;
                             Main.main.flies.add(new Fly(xx, yy, false));
                         }
                         fliesInside = false;
@@ -245,8 +240,8 @@ public class Tree extends WorldObject {
             double angle = random.nextDouble()*360;
             int xx = (int)(offX+x+Math.cos(Math.toRadians(angle))*distance);
             int yy = (int)(offY+y+Math.sin(Math.toRadians(angle))*distance);
-//            int xx = (int)x - random.nextInt(distanceLimit*2) + distanceLimit + offX;
-//            int yy = (int)y - random.nextInt(distanceLimit*2) + distanceLimit + offY;
+//            int xx = (int)scoreX - random.nextInt(distanceLimit*2) + distanceLimit + offX;
+//            int yy = (int)scoreY - random.nextInt(distanceLimit*2) + distanceLimit + offY;
             int size = (int)(minSize+(1-gaussian)*(maxSize-minSize));
 //            int size = minSize+random.nextInt(maxSize-minSize);
             Leaf leave = new Leaf(xx, yy, size, random.nextInt(15), random.nextInt(359));

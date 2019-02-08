@@ -87,9 +87,6 @@ public class StructuralBlock extends WorldObject {
             }
         }
 
-        // HERE: Fix depth
-        this.depth = random.nextInt(1023)+depth*1024;
-
         this.mask = new Mask.Rectangle(x, y, 16, 16);
         if(solid)
             this.aabbComponent = new AABBComponent(this.mask);

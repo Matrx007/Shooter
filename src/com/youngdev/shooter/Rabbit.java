@@ -18,10 +18,9 @@ public class Rabbit extends Healable {
     private double speedTarget;
     private double maxSpeed;
     private double movingTime;
-    private int step;
+    private double step;
     private boolean escaping;
     private Random random;
-    private boolean unStucking;
     public final int Type = 8;
 
     private AABBCollisionManager cm;
@@ -33,11 +32,11 @@ public class Rabbit extends Healable {
         random = new Random();
 
         this.mask = new Mask.Rectangle(x-20, y-20, 40, 40);
+        aabbComponent = new AABBComponent(this.mask);
         cm = new AABBCollisionManager(this, Main.collisionMap);
-        if(collideWithOthers) aabbComponent = new AABBComponent(this.mask);
+        cm.unstuck();
 
         escaping = false;
-        unStucking = Main.collisionMap.collisionWithExcept(mask, aabbComponent);
         speedTick = 0;
         direction = random.nextInt(359);
         directionTarget = random.nextInt(359);
@@ -50,43 +49,45 @@ public class Rabbit extends Healable {
 
     @Override
     public void update(Input i) {
-        step+=8;
+        step += Main.toSlowMotion(8);
         if (escaping) {
             directionTarget = Fly.angle(x, y, Main.main.player.x, Main.main.player.y) - 180;
             speedTarget = maxSpeed;
         } else {
-            if(movingTime < 0) {
-                if(random.nextInt(5)==1) {
+            if (movingTime < 0) {
+                if (random.nextInt(5) == 1) {
                     directionTarget = random.nextInt(359);
                 } else {
-                    directionTarget += random.nextInt(180)-90;
+                    directionTarget += random.nextInt(180) - 90;
                 }
 //                directionTarget = random.nextInt(359);
-                speedTarget = maxSpeed*0.5d + maxSpeed*random.nextDouble()*0.5d;
-                movingTime = random.nextInt(60)+15;
+                speedTarget = maxSpeed * 0.5d + maxSpeed * random.nextDouble() * 0.5d;
+                movingTime = random.nextInt(60) + 15;
             } else {
-                movingTime-=Main.toSlowMotion(1d);
+                movingTime -= Main.toSlowMotion(1d);
             }
 //            System.out.println("movingTime = " + movingTime);
         }
 
         direction += Main.toSlowMotion((directionTarget - direction) * 0.25d);
-        speed += Main.toSlowMotion((speedTarget - speed) * 0.1d);
+        speed += Main.toSlowMotion((speedTarget - speed) * 0.1);
 
-        double prevX = x;
-        double prevY = y;
-        cm.move(Math.cos(Math.toRadians(direction)) * Main.toSlowMotion(
-                (1-(step%150)/150d)*speed*2d),
-                Math.sin(Math.toRadians(direction)) * Main.toSlowMotion(
-                        (1-(step%150)/150d)*speed*2d));
-        if(speed > 0 && (x == prevX && y == prevY)) {
+        if (i.isButton(1) && this.mask.isColliding(
+                i.getRelativeMouseX(), i.getRelativeMouseY())) {
+            double oldX = aabbComponent.area.x;
+            double oldY = aabbComponent.area.y;
             cm.unstuck();
-            int collisions = Main.collisionMap.
-                    collisionWithWhoExcept(mask, aabbComponent).size();
-            if(collisions > 0)
-                if(!Main.isPixelOnScreen((int)x, (int)y, 1)) {
-                    dead = true;
-                }
+            double diffX = aabbComponent.area.x-oldX;
+            double diffY = aabbComponent.area.y-oldY;
+        } else {
+            if (Main.collisionMap.collisionWithExcept(mask, aabbComponent)) {
+                cm.unstuck();
+            }
+            double spd = Main.toSlowMotion(speed);
+            cm.move(Math.cos(Math.toRadians(direction)) * Main.toSlowMotion(
+                    (1 - (step % 150) / 150d) * spd * 2d),
+                    Math.sin(Math.toRadians(direction)) * Main.toSlowMotion(
+                            (1 - (step % 150) / 150d) * spd * 2d));
         }
     }
 
@@ -216,14 +217,17 @@ public class Rabbit extends Healable {
         fillPoly(points, new Color(220, 220,220), r);
 
         if(Main.main.showDebugInfo) {
-            r.fillRectangle(mask.x, mask.y, ((Mask.Rectangle)mask).w, ((Mask.Rectangle)mask).h, Color.red);
+            Mask.Rectangle mask = (Mask.Rectangle) aabbComponent.area;
+            r.fillRectangle(mask.x, mask.y, mask.w, mask.h, Color.red);
+            mask = (Mask.Rectangle) this.mask;
+            r.drawRectangle(mask.x, mask.y, mask.w, mask.h, Color.blue);
 
 //            int w = ((Mask.Rectangle) aabbComponent.area).w;
 //            int h = ((Mask.Rectangle) aabbComponent.area).h;
-//            r.fillCircle(aabbComponent.area.x, aabbComponent.area.y, 3, Color.blue);
-//            r.fillCircle(aabbComponent.area.x+w, aabbComponent.area.y, 3, Color.blue);
-//            r.fillCircle(aabbComponent.area.x+w, aabbComponent.area.y+h, 3, Color.blue);
-//            r.fillCircle(aabbComponent.area.x, aabbComponent.area.y+h, 3, Color.blue);
+//            r.fillCircle(aabbComponent.area.scoreX, aabbComponent.area.scoreY, 3, Color.blue);
+//            r.fillCircle(aabbComponent.area.scoreX+w, aabbComponent.area.scoreY, 3, Color.blue);
+//            r.fillCircle(aabbComponent.area.scoreX+w, aabbComponent.area.scoreY+h, 3, Color.blue);
+//            r.fillCircle(aabbComponent.area.scoreX, aabbComponent.area.scoreY+h, 3, Color.blue);
         }
     }
 

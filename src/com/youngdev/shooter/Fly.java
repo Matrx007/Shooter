@@ -1,21 +1,16 @@
 package com.youngdev.shooter;
 
-import com.engine.libs.game.GameObject;
 import com.engine.libs.input.Input;
 import com.engine.libs.math.AdvancedMath;
 import com.engine.libs.rendering.Renderer;
 
-import javax.sound.sampled.Clip;
-import javax.sound.sampled.FloatControl;
 import java.awt.*;
-import java.util.Iterator;
 import java.util.Random;
 
 public class Fly extends WorldObject {
     public boolean state; // TRUE - Idle, FALSE - Fly away
     private double targetX, targetY, speed;
     public double angle;
-    private Random random;
     public final int Type = 5;
     private int minDistanceToFlyAway, flyCounter;
     public double direction;
@@ -27,10 +22,6 @@ public class Fly extends WorldObject {
         this.y = y;
         this.speed = 0;
         this.state = true;
-
-        // HERE: Fix depth
-        this.random = new Random();
-        this.depth = random.nextInt(1023)+depth*1024;
 
         targetX = x + random.nextInt(32) - 16;
         targetY = y + random.nextInt(32) - 16;
@@ -87,7 +78,7 @@ public class Fly extends WorldObject {
     @Override
     public void render(Renderer r) {
         if(dead) return;
-//        r.fillRectangle((int)x-2, (int)y-2, 4, 4, Color.black);
+//        r.fillRectangle((int)scoreX-2, (int)scoreY-2, 4, 4, Color.black);
         double[][] points;
 
         // Body
@@ -178,16 +169,16 @@ public class Fly extends WorldObject {
 
     static double[] rotatePoint(double x, double y, double anchorX,
                                        double anchorY, double degrees) {
-        double xx = (x - anchorX) * Math.cos(degrees * Math.PI / 180) - (y - anchorY) * Math.sin(degrees * Math.PI / 180) + anchorX;
-        double yy = (x - anchorX) * Math.sin(degrees * Math.PI / 180) + (y - anchorY) * Math.cos(degrees * Math.PI / 180) + anchorY;
+        double xx = (x - anchorX) * Math.cos(degrees * Math.PI / 180d) - (y - anchorY) * Math.sin(degrees * Math.PI / 180d) + anchorX;
+        double yy = (x - anchorX) * Math.sin(degrees * Math.PI / 180d) + (y - anchorY) * Math.cos(degrees * Math.PI / 180d) + anchorY;
         return new double[]{xx, yy};
     }
 
     public void flyAway(boolean force) {
-        if(force || Main.main.flyCounter < Main.main.flySounds) {
+        if(force || Main.main.flySoundCounter < Main.main.flySounds) {
             Main.main.soundManager.playSound(
                     "beeFlyingAway", -20f);
-            Main.main.flyCounter++;
+            Main.main.flySoundCounter++;
         }
     }
 }
@@ -199,7 +190,7 @@ public class Fly extends WorldObject {
             for(it = Main.main.visibleChunkObjects.iterator(); it.hasNext();) {
                 GameObject obj = it.next();
                 if(obj instanceof Healable && !((Healable) obj).isEnemy) {
-                    double distance = Math.hypot((x - obj.x), (y - obj.y));
+                    double distance = Math.hypot((scoreX - obj.scoreX), (scoreY - obj.scoreY));
                     if(distance <= minDis) {
                         minDis = distance;
                         closestEnemy = (Healable) obj;
@@ -209,18 +200,18 @@ public class Fly extends WorldObject {
 
             if (minDis < minDistanceToFlyAway && closestEnemy != null) {
                 state = false;
-                angle = angle(closestEnemy.x, closestEnemy.y,
-                        x, y)-180+random.nextInt(90)-45;
-                if(Main.main.isPixelOnScreen((int)x, (int)y)) {
+                angle = angle(closestEnemy.scoreX, closestEnemy.scoreY,
+                        scoreX, scoreY)-180+random.nextInt(90)-45;
+                if(Main.main.isPixelOnScreen((int)scoreX, (int)scoreY)) {
                     Main.main.flies.forEach(f -> {
-                        if(Fly.distance(x, y, f.x, f.y) < 64) {
-                            flyCounter++;
+                        if(Fly.distance(scoreX, scoreY, f.scoreX, f.scoreY) < 64) {
+                            flySoundCounter++;
                         }
                     });
-                    if(flyCounter > 0)
+                    if(flySoundCounter > 0)
                         flyAway(false);
                     else flyAway(true);
-                    flyCounter = 0;
+                    flySoundCounter = 0;
                 }
             } else
 * */

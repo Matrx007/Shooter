@@ -8,9 +8,9 @@ import java.util.Random;
 
 public class Camera {
     public double cX, cY;
-    private double shakeX, shakeY, shakeAmount;
+    private double shakeX, shakeY, shakeAmount, mx, my;
     private int width, height;
-    public float bluishEffect;
+    public float bluishEffect, bitCrushEffect, blackAndWhiteEffect;
     public GameObject target;
     private Random random;
 
@@ -21,6 +21,8 @@ public class Camera {
         this.cX = target.x-width/2;
         this.cY = target.y-height/2;
         bluishEffect = 1f;
+        bitCrushEffect = 0f;
+        blackAndWhiteEffect = 0f;
         this.shakeX = 0d;
         this.shakeY = 0d;
         this.shakeAmount = 0f;
@@ -29,6 +31,9 @@ public class Camera {
     }
 
     public void update() {
+        mx = cX-Main.main.getE().getInput().getRelativeMouseX()+width/2d;
+        my = cY-Main.main.getE().getInput().getRelativeMouseY()+height/2d;
+
         if(Main.startMenuMode) {
             cY -= 0.5;
         } else {
@@ -44,6 +49,14 @@ public class Camera {
             cX += Main.toSlowMotion((target.x - cX - width / 2d) * 0.1d);
             cY += Main.toSlowMotion((target.y - cY - height / 2d) * 0.1d);
         }
+
+        bluishEffect += 0.0125f;
+        bluishEffect = (float)AdvancedMath.setRange(
+                bluishEffect, 0d, 1d);
+
+        bitCrushEffect -= 0.005f;
+        bitCrushEffect = (float)AdvancedMath.setRange(
+                bitCrushEffect, 0d, 1d);
     }
 
     public void shake(float amount) {
@@ -52,6 +65,9 @@ public class Camera {
     }
 
     public void apply(Renderer r) {
+//        double cameraX = (cX+width/2d-mx/10d)-width/2d;
+//        double cameraY = (cY+height/2d-my/10d)-height/2d;
+
         r.setCamX((int)cX + (int)shakeX);
         r.setCamY((int)cY + (int)shakeY);
     }

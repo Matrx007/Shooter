@@ -1,13 +1,12 @@
 package com.youngdev.shooter;
 
-import com.engine.libs.game.GameObject;
 import com.engine.libs.game.Mask;
+import com.engine.libs.game.behaviors.AABBCollisionManager;
+import com.engine.libs.game.behaviors.AABBComponent;
 import com.engine.libs.input.Input;
 import com.engine.libs.rendering.Renderer;
-import com.sun.javafx.geom.Vec3d;
 
 import java.awt.*;
-import java.util.ArrayList;
 
 public class DuleKiva extends WorldObject {
     private int step;
@@ -16,36 +15,94 @@ public class DuleKiva extends WorldObject {
     private double[] flares;
     private int flareStep;
     private double stroke;
+    private boolean unstucked;
+    private double waveStep;
+    private double shrinkingMultiplier;
 
     public DuleKiva(int x, int y) {
-        super(12, 19, 14);
+        super(19, 14.5, 19);
         this.x = x;
         this.y = y;
         this.mask = new Mask.Rectangle(x-35, y-35, 70,70);
         flares = new double[5];
         flareStep = random.nextInt(240);
         this.depth = 19*1024+random.nextInt(1024);
+        shrinkingMultiplier = 1d;
+
+        unstucked = false;
+    }
+
+    private void createProjectTile(double direction) {
+        double x = this.x + Math.cos(Math.toRadians(direction))*16d;
+        double y = this.y + Math.sin(Math.toRadians(direction))*16d;
+        Main.main.addEntity(new ProjectTile(
+                (int) Math.round(x), (int)Math.round(y),
+                direction));
+    }
+
+    private void createWave() {
+        int patternSize = random.nextInt(3)+3;
+        int sectors = random.nextInt(5)+5;
+        boolean[] pattern = new boolean[patternSize];
+        pattern[0] = true;
+        for (int i = patternSize-1; i > 0; i--) {
+            pattern[i] = random.nextInt(patternSize*2) == 0;
+        }
+
+        double sectorAngleWidth = 360d / sectors;
+        double patternAngleWidth = sectorAngleWidth / patternSize;
+        double randomAngleOffset = random.nextInt(359);
+
+        for (int i = 0; i < patternSize*sectors; i++) {
+            int patternIndex = i % patternSize;
+            if(!pattern[patternIndex]) continue;
+            int sector = i / patternSize;
+
+            createProjectTile(randomAngleOffset + sector *
+                    sectorAngleWidth + patternIndex * patternAngleWidth +
+                    random.nextInt(360));
+        }
     }
 
     @Override
     public void update(Input input) {
+        shrinkingMultiplier *= 1.05;
+        shrinkingMultiplier = Math.min(shrinkingMultiplier, 1);
+
+        if(!unstucked) {
+            this.aabbComponent = new AABBComponent(mask);
+            new AABBCollisionManager(this, Main.collisionMap).unstuck();
+            this.aabbComponent = null;
+            unstucked = true;
+        }
+
         Player player = Main.main.player;
         if(Fly.distance(player.x, player.y, x, y) < 32 && !dead) {
             super.dead = true;
-            Main.main.soundManager.playSound("explosion", 1, -20f);
+            Main.main.soundManager.playSound("open", 1, -15f);
             Main.main.camera.shake(5f);
-            for(int i = random.nextInt(5)+5; i >= 0; i--) {
+            for(int i = random.nextInt(15)+15; i >= 0; i--) {
                 Main.main.addEntity(new Coin((int)x, (int)y,
                         random.nextInt(359)));
+            }
+            Main.main.camera.bluishEffect = 0.75f;
+        } else if(Fly.distance(player.x, player.y, x, y) < 400) {
+            double multiplier = Fly.distance(player.x,
+                    player.y, x, y)/100d;
+            waveStep+= Main.toSlowMotion(1d);
+            if(waveStep > 120d*multiplier) {
+                waveStep = 0;
+                createWave();
+                shrinkingMultiplier = 0.5d;
             }
         }
 
         step+=1;
 
         int prevAngle = (int)angle;
-        angle += (targetAngle-angle)*0.05;
+        angle += Main.toSlowMotion((targetAngle-angle)*0.025d);
         if(Math.abs(angle-targetAngle) < 1) {
-            targetAngle = angle+random.nextInt(720)-360;
+            targetAngle = angle+random.nextInt(2880)-1440;
         }
         stroke = Math.min(Math.abs(8- Math.abs(prevAngle - angle)/2d), 8d);
 
@@ -71,28 +128,16 @@ public class DuleKiva extends WorldObject {
     public void render(Renderer r) {
         double[][] points;
         for (int i = flares.length-1; i >= 0; i--) {
-            double size = 16+i*3;
+            double size = (2+i*3)*shrinkingMultiplier;
             double a = flares[i]; // Flare's angle
             points = new double[][]{
-                    Fly.rotatePoint(x - size, y - size, x, y, -a - 90),
-                    Fly.rotatePoint(x + size, y - size, x, y, -a - 90),
-                    Fly.rotatePoint(x + size, y + size, x, y, -a - 90),
-                    Fly.rotatePoint(x - size, y + size, x, y, -a - 90)
+                    Fly.rotatePoint(x - size, y - size, x, y, -a - 90d),
+                    Fly.rotatePoint(x + size, y - size, x, y, -a - 90d),
+                    Fly.rotatePoint(x + size, y + size, x, y, -a - 90d),
+                    Fly.rotatePoint(x - size, y + size, x, y, -a - 90d)
             };
-            Fly.fillPoly(points, new Color(32, 32, 80, 32), r);
+            Fly.fillPoly(points, new Color(128-i*24, 32, 32+i*16), r);
         }
-
-        points = new double[][]{
-                Fly.rotatePoint(x-8, y-8, x, y, -angle-90),
-                Fly.rotatePoint(x+8, y-8, x, y, -angle-90),
-                Fly.rotatePoint(x+8, y+8, x, y, -angle-90),
-                Fly.rotatePoint(x-8, y+8, x, y, -angle-90)
-        };
-        Fly.fillPoly(points, new Color(136, 16, 16), r);
-        Stroke oldStroke = ((Graphics2D)r.getG()).getStroke();
-        ((Graphics2D)r.getG()).setStroke(new BasicStroke((float) stroke));
-        Fly.drawPoly(points, new Color(16, 16, 48), r);
-        ((Graphics2D)r.getG()).setStroke(oldStroke);
     }
 
     @Override

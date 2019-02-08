@@ -27,10 +27,6 @@ public class Arrow extends WorldObject {
         this.yD = y;
         this.dir = dir;
 
-        // HERE: Fix depth
-        this.random = new Random();
-        this.depth = random.nextInt(1023)+depth*1024;
-
         wiggleStep = random.nextInt(359);
         if(UseParticles)
             particles = new ArrayList<>();

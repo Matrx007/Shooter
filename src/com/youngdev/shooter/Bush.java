@@ -11,10 +11,10 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
 
+@SuppressWarnings("ALL")
 public class Bush extends WorldObject {
 
     private ArrayList<Leaf> leaf;
-    private Random random;
     private boolean prevCollision;
     public boolean fliesInside;
     public final int Type = 1;
@@ -26,10 +26,6 @@ public class Bush extends WorldObject {
         this.y = y;
         this.fliesInside = true;
         this.solid = true;
-
-        // HERE: Fix depth
-        this.random = new Random();
-        this.depth = random.nextInt(1023)+depth*1024;
 
         leaf = new ArrayList<>();
 
@@ -46,7 +42,7 @@ public class Bush extends WorldObject {
                 int xx = (int) (x + Math.cos(Math.toRadians(angle)) * distance);
                 int yy = (int) (y + Math.sin(Math.toRadians(angle)) * distance);
 
-                Leaf berry = new Leaf(xx, yy, 5, random.nextInt(10) - 5,
+                Leaf berry = new Leaf(xx, yy, 5, random.nextInt(20) - 5,
                         random.nextInt(359));
                 berry.baseColor = new Color(100, 40, 40);
                 leaf.add(berry);
@@ -68,8 +64,7 @@ public class Bush extends WorldObject {
             GameObject obj = it.next();
             if (obj instanceof Arrow || (obj instanceof Healable))
                 if(obj.mask != null)
-                    if (obj.mask.isColliding(mask) ||
-                            Fly.distance(x, y, obj.x, obj.y) < 64) {
+                    if (obj.mask.isColliding(mask.expand(1))) {
                         collision = true;
                         break;
                     }
@@ -101,8 +96,15 @@ public class Bush extends WorldObject {
 
     @Override
     public void render(Renderer r) {
-        leaf.forEach(leave -> r.fillRectangle(leave.x-leave.size/2+leave.addX, leave.y-leave.size/2+leave.addY,
-                leave.size, leave.size, leave.getColor()));
+//        leaf.forEach(leave -> r.fillRectangle(leave.scoreX-leave.size/2+leave.addX, leave.scoreY-leave.size/2+leave.addY,
+//                leave.size, leave.size, leave.getColor()));
+        leaf.forEach(leave -> r.fillCircle(leave.x+leave.addX, leave.y+leave.addY,
+                leave.size, leave.getColor()));
+        if(Main.main.showDebugInfo) {
+            r.fillRectangle(mask.x, mask.y,
+                    ((Mask.Rectangle)mask).w, ((Mask.Rectangle)mask).h,
+                    Color.red);
+        }
     }
 
     @Override
@@ -124,13 +126,13 @@ public class Bush extends WorldObject {
             double angle = random.nextDouble()*360;
             int xx = (int)(x+Math.cos(Math.toRadians(angle))*distance);
             int yy = (int)(y+Math.sin(Math.toRadians(angle))*distance);
-            int size = (int)((random.nextInt(30)+24f)*(i/numLeaf+0.5f));
+            int size = (int)((random.nextInt(24)+24f)*(i/numLeaf+0.5f));
             leaf.add(new Leaf(xx, yy, size, random.nextInt(15), random.nextInt(359)));
 
             smallestX = Math.min(smallestX, xx-size/2);
             smallestY = Math.min(smallestY, yy-size/2);
-            largestX = Math.max(largestX, (int)Math.ceil(xx+size/2d));
-            largestY = Math.max(largestY, (int)Math.ceil(yy+size/2d));
+            largestX = Math.max(largestX, (int)Math.ceil(xx+size/2));
+            largestY = Math.max(largestY, (int)Math.ceil(yy+size/2));
         }
 
         return new Rectangle(smallestX, smallestY, largestX-smallestX, largestY-smallestY);
