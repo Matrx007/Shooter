@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
 
-@SuppressWarnings("ALL")
 public class Bush extends WorldObject {
 
     private ArrayList<Leaf> leaf;
@@ -141,7 +140,8 @@ public class Bush extends WorldObject {
     public class Leaf {
         public int x, y, addX, addY, size, tone;
         public double speed, step;
-        public Color baseColor = new Color(49, 107, 38);
+        //49, 107, 38
+        public Color baseColor = new Color(29, 87, 18);
 
         public Leaf(int x, int y, int size, int tone, int step) {
             this.x = x;

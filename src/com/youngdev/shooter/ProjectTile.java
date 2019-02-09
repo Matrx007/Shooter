@@ -47,6 +47,11 @@ public class ProjectTile extends WorldObject {
 
     @Override
     public void update(Input input) {
+
+        if(Main.collisionMap.collisionAt((int)x, (int)y)) {
+            lifetime = 0;
+        }
+
         lifetime -= 0.0025;
         this.x += Main.toSlowMotion(Math.cos(
                 Math.toRadians(direction)) * SPEED);

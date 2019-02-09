@@ -25,7 +25,7 @@ public class Branches extends WorldObject {
         particles = new ArrayList<>();
 
         // HERE: Generate branches
-        baseColor0 = new Color(75, 11, 13);
+        baseColor0 = new Color(52, 36, 39);
         for(int i = random.nextInt(20)+
                 ((random.nextInt(5)==1) ? 50 : 0); i >= 0; i--) {
             double angle = random.nextDouble()*360d;

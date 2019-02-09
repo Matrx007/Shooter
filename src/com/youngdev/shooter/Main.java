@@ -112,12 +112,9 @@ public class Main extends Game {
 
         buttonLabels = new String[] {
                 "DuleKiva",
-                "Kohandatud mäng",
-                "Krediidid",
-                "Seaded",
-                "Lahku"
+                "Lahku mängust"
         };
-        numButtons = 5;
+        numButtons = 2;
         buttonImages = new BufferedImage[numButtons];
         buttonPrevInside = new boolean[numButtons];
 
@@ -145,6 +142,7 @@ public class Main extends Game {
         fonts.add("Nunito-Bold.ttf");
         fonts.add("Nunito-Light.ttf");
         fonts.add("Romantiques.ttf");
+        fonts.add("shanghai.ttf");
 
         for(String name : fonts) {
             try {
@@ -260,8 +258,8 @@ public class Main extends Game {
 
         ui = new UI();
 
-        music = soundManager.playSound("startMenuMusic", Clip.LOOP_CONTINUOUSLY, -15f);
-        noise = soundManager.playSound("noise", Clip.LOOP_CONTINUOUSLY, 0f);
+        music = soundManager.playSound("startMenuMusic", Clip.LOOP_CONTINUOUSLY, -17.5f);
+        noise = soundManager.playSound("noise", Clip.LOOP_CONTINUOUSLY, -3f);
         noise.stop();
         music.loop(Clip.LOOP_CONTINUOUSLY);
         noise.loop(Clip.LOOP_CONTINUOUSLY);
@@ -306,6 +304,7 @@ public class Main extends Game {
 
         soundManager.addClip("sounds/pickup.wav", "pickup");
         soundManager.addClip("sounds/nextWave.wav", "nextWave");
+        soundManager.addClip("sounds/gameover.wav", "gameOver");
     }
 
     public void deleteChunk(int x, int y) {
@@ -1102,11 +1101,10 @@ public class Main extends Game {
         player = new Player(e.getRenderer().getCamX()+e.width/2,
                 e.getRenderer().getCamY()+e.height/2);
         camera.target = player;
-        camera.bitCrushEffect = 0.5f;
+        camera.bitCrushEffect = 0f;
         random.setSeed(random.nextLong());
         camera.blackAndWhiteEffect = 0f;
         slowMotionSpeed = 1f;
-        camera.bitCrushEffect = 1f;
         camera.bluishEffect = 0f;
     }
 

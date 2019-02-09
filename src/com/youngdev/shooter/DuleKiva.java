@@ -86,7 +86,8 @@ public class DuleKiva extends WorldObject {
                         random.nextInt(359)));
             }
             Main.main.camera.bluishEffect = 0.75f;
-        } else if(Fly.distance(player.x, player.y, x, y) < 400) {
+        } else if(Fly.distance(player.x, player.y, x, y) < 400 &&
+                Fly.distance(player.x, player.y, x, y) > 60) {
             double multiplier = Fly.distance(player.x,
                     player.y, x, y)/100d;
             waveStep+= Main.toSlowMotion(1d);

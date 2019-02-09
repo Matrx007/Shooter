@@ -147,7 +147,8 @@ public class Player extends Healable {
 
         cm.move(speedX, speedY);
 
-        if(Main.collisionMap.collisionWithExcept(mask, aabbComponent)) {
+        if(Main.collisionMap.collisionWithWhoExcept(
+                mask, aabbComponent).size() > 0) {
             cm.unstuck();
         }
 
