@@ -5,7 +5,6 @@ import com.engine.libs.game.Mask;
 import com.engine.libs.input.Input;
 import com.engine.libs.math.AdvancedMath;
 import com.engine.libs.rendering.Renderer;
-import com.engine.libs.world.World;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -29,6 +28,8 @@ public class FlyGroup extends WorldObject {
             int yyy = y + (int) (Math.sin(Math.toRadians(angle))*distance);
             flies.add(new Fly(xxx, yyy));
         }
+
+        findBounds();
     }
 
     public FlyGroup(int x, int y, int numFlies, boolean flyAway) {
@@ -67,16 +68,16 @@ public class FlyGroup extends WorldObject {
             Fly fly = new Fly(xxx, yyy);
             flies.add(fly);
             if(flyAway) {
-                fly.state = false;
+                fly.wandering = false;
                 fly.direction = direction;
             }
         }
+        findBounds();
         this.depth = 15*1024+random.nextInt(1024);
     }
 
     @Override
     public void update(Input i) {
-
         int smallestX=Integer.MAX_VALUE;
         int smallestY=Integer.MAX_VALUE;
         int largestX=Integer.MIN_VALUE;
@@ -91,42 +92,56 @@ public class FlyGroup extends WorldObject {
             largestY = (int)Math.max(largestY, fly.y);
         }
 
+        findBounds();
+
         // ###### SEARCH FOR NEARBY ENTITIES #######
 
+        boolean found = false;
         ArrayList<GameObject> nearEntities = new ArrayList<>();
         for (GameObject entity : Main.main.visibleChunkEntities) {
             if(entity.mask instanceof Mask.Rectangle &&
                     entity.mask.isColliding(mask)) {
-                nearEntities.add(entity);
-            }
-        }
-
-        boolean found = false;
-        Iterator<GameObject> it;
-        for(it = nearEntities.iterator(); it.hasNext();) {
-            GameObject obj = it.next();
-            if(obj instanceof Healable) {
-                if(AdvancedMath.inRange(obj.x, obj.y,
+                if(AdvancedMath.inRange(entity.x, entity.y,
                         smallestX-range, smallestY-range,
                         largestX-smallestX+range,
                         largestY-smallestY+range)) {
-                     found = true;
-                     break;
+                    found = true;
+                    break;
                 }
             }
         }
 
         // ####### UPDATE FLIES ########
 
-        for (int j = flies.size()-1; j>=0; j--) {
-            Fly fly = flies.get(j);
-            if(fly.state)
-                if(found) {
-                    fly.state = false;
+        boolean _found = found;
+        flies.removeIf((fly) -> {
+            if(fly.wandering)
+                if(_found) {
+                    fly.wandering = false;
                     fly.angle = random.nextInt(360);
                 }
             fly.update(i);
+            return fly.dead;
+        });
+    }
+
+    private void findBounds() {
+        int smallestX=Integer.MAX_VALUE;
+        int smallestY=Integer.MAX_VALUE;
+        int largestX=Integer.MIN_VALUE;
+        int largestY=Integer.MIN_VALUE;
+
+        // ###### FIND BOUNDS #######
+        for (int j = flies.size()-1; j>=0; j--) {
+            Fly fly = flies.get(j);
+            smallestX = (int)Math.min(smallestX, fly.x);
+            smallestY = (int)Math.min(smallestY, fly.y);
+            largestX = (int)Math.max(largestX, fly.x);
+            largestY = (int)Math.max(largestY, fly.y);
         }
+
+        this.mask = new Mask.Rectangle(smallestX, smallestY,
+                largestX-smallestX, largestY-smallestY);
     }
 
     @Override

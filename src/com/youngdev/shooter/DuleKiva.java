@@ -18,6 +18,7 @@ public class DuleKiva extends WorldObject {
     private boolean unstucked;
     private double waveStep;
     private double shrinkingMultiplier;
+    public static double SpawnSpeed = 120d;
 
     public DuleKiva(int x, int y) {
         super(19, 14.5, 19);
@@ -27,7 +28,11 @@ public class DuleKiva extends WorldObject {
         flares = new double[5];
         flareStep = random.nextInt(240);
         this.depth = 19*1024+random.nextInt(1024);
-        shrinkingMultiplier = 1d;
+        shrinkingMultiplier = 0.05d;
+
+        this.aabbComponent = new AABBComponent(mask);
+        new AABBCollisionManager(this, Main.collisionMap).unstuck();
+        this.aabbComponent = null;
 
         unstucked = false;
     }
@@ -66,7 +71,7 @@ public class DuleKiva extends WorldObject {
 
     @Override
     public void update(Input input) {
-        shrinkingMultiplier *= 1.05;
+        shrinkingMultiplier *= 1+(0.05 * SpeedController.calcSpeed());
         shrinkingMultiplier = Math.min(shrinkingMultiplier, 1);
 
         if(!unstucked) {
@@ -77,7 +82,8 @@ public class DuleKiva extends WorldObject {
         }
 
         Player player = Main.main.player;
-        if(Fly.distance(player.x, player.y, x, y) < 32 && !dead) {
+        if(Fly.distance(player.x, player.y, x, y) < 32 && !dead &&
+                shrinkingMultiplier > 0.75d) {
             super.dead = true;
             Main.main.soundManager.playSound("open", 1, -15f);
             Main.main.camera.shake(5f);
@@ -87,11 +93,12 @@ public class DuleKiva extends WorldObject {
             }
             Main.main.camera.bluishEffect = 0.75f;
         } else if(Fly.distance(player.x, player.y, x, y) < 400 &&
-                Fly.distance(player.x, player.y, x, y) > 60) {
+                Fly.distance(player.x, player.y, x, y) > 60 &&
+                shrinkingMultiplier > 0.9d) {
             double multiplier = Fly.distance(player.x,
                     player.y, x, y)/100d;
             waveStep+= Main.toSlowMotion(1d);
-            if(waveStep > 120d*multiplier) {
+            if(waveStep > SpawnSpeed *multiplier) {
                 waveStep = 0;
                 createWave();
                 shrinkingMultiplier = 0.5d;

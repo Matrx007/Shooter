@@ -7,7 +7,6 @@ import com.engine.libs.input.Input;
 import com.engine.libs.rendering.Renderer;
 
 import java.awt.*;
-import java.util.Random;
 
 public class Coin extends WorldObject {
 
@@ -67,12 +66,15 @@ public class Coin extends WorldObject {
 
         if(this.speed < 0.25) pickable = true;
 
-        double addX = Math.cos(Math.toRadians(angle))*speed;
-        double addY = Math.sin(Math.toRadians(angle))*speed;
+        double addX = Math.cos(Math.toRadians(angle))*speed*SpeedController.calcSpeed();
+        double addY = Math.sin(Math.toRadians(angle))*speed*SpeedController.calcSpeed();
 
-        if(Main.collisionMap.collisionWithWhoExcept(
-                mask, aabbComponent).size() > 0) {
-            cm.unstuck();
+        if(Main.collisionMap.collisionWithExcept(
+                mask, aabbComponent)) {
+            x += addX;
+            y += addY;
+            mask.move(addX, addY);
+//            cm.unstuck();
         } else {
             cm.move(addX, addY);
             xD = x;

@@ -38,16 +38,16 @@ public class Camera {
             cY -= 0.5;
         } else {
             if (shakeAmount != 0) {
-                shakeX = Main.toSlowMotion(random.nextFloat() * shakeAmount * 2 - shakeAmount);
-                shakeY = Main.toSlowMotion(random.nextFloat() * shakeAmount * 2 - shakeAmount);
-                shakeAmount *= Main.toSlowMotion(0.9f);
+                shakeX = random.nextFloat() * shakeAmount * 2 - shakeAmount;
+                shakeY = random.nextFloat() * shakeAmount * 2 - shakeAmount;
+                shakeAmount *= 0.9f;
             } else {
                 shakeX = 0;
                 shakeY = 0;
             }
 
-            cX += Main.toSlowMotion((target.x - cX - width / 2d) * 0.1d);
-            cY += Main.toSlowMotion((target.y - cY - height / 2d) * 0.1d);
+            cX += ((target.x - cX - width / 2d) * 0.1d);
+            cY += ((target.y - cY - height / 2d) * 0.1d);
         }
 
         bluishEffect += 0.0125f;

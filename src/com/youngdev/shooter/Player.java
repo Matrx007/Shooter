@@ -5,7 +5,6 @@ import com.engine.libs.game.Mask;
 import com.engine.libs.game.behaviors.AABBCollisionManager;
 import com.engine.libs.game.behaviors.AABBComponent;
 import com.engine.libs.input.Input;
-import com.engine.libs.math.AdvancedMath;
 import com.engine.libs.rendering.Renderer;
 import com.engine.libs.world.CollisionMap;
 
@@ -34,16 +33,18 @@ public class Player extends Healable {
             coinOverlayX, coinOverlayY;
     private double slowMotionSpeedMultiplierTarget;
 
-    private static Color baseColor = new Color(170, 172, 78); // 170, 32, 128
+    private static Color baseColor = new Color(220, 212, 148);
+    // 170, 32, 128
     private float speedX, targetSpeedX, speedY, targetSpeedY,
-            maxSpeed, speedStep, blinkingTimer;
+            speedStep, blinkingTimer;
     private ArrayList<Vector8> rays;
     private ShadowRenderer shadowRenderer;
     public final int Type = 7;
     private int step;
-    static final int maxHealth = 5;
+    public static int MaxHealth = 5;
     public int health;
     public boolean isDead;
+    public static float MaxSpeed = 3f;
 
     public Player(int x, int y) {
         super(7, x, y, 4, 4, 200, 0, 10, false, false);
@@ -72,7 +73,6 @@ public class Player extends Healable {
         this.xx = x;
         this.yy = y;
 
-        this.maxSpeed = 3f;
         this.targetSpeedX = 0;
         this.targetSpeedY = 0;
         this.speedX = 0;
@@ -80,14 +80,14 @@ public class Player extends Healable {
         this.speedStep = 0.5f;
         this.blinkingTimer = 0;
 
-        health = maxHealth;
+        health = MaxHealth;
 
         slowMotionSpeedMultiplierTarget = 1d;
 
         rays = new ArrayList<>();
         shadowRenderer = new ShadowRenderer();
         CollisionMap collisionMap = Main.collisionMap;
-        mask = new Mask.Rectangle(x-4, y-4, 8, 8);
+        mask = new Mask.Rectangle(x-5, y-5, 10, 10);
         aabbComponent = new AABBComponent(this.mask);
         cm = new AABBCollisionManager(this, collisionMap);
     }
@@ -104,12 +104,13 @@ public class Player extends Healable {
 
             if ((moveX != 0 || moveY != 0)) {
                 timer = time;
-                step++;
+                step+=SpeedController.calcSpeed();
                 if (step % 20 == 1) {
                     // TODO: Play sound depending on player's location
                     if (onPuddle) {
                         Main.main.soundManager.playSound("puddle" +
                                 random.nextInt(5), -10f);
+//                        Main.main.createWave(x, y);
                     } else if (onPlant) {
                         Main.main.soundManager.playSound("grass" +
                                 ((step / 20 % 2 == 0) ? 1 : 0), -15f);
@@ -132,8 +133,8 @@ public class Player extends Healable {
             prevOnPlant = onPlant;
             onPlant = false;
 
-            targetSpeedX = moveX * maxSpeed;
-            targetSpeedY = moveY * maxSpeed;
+            targetSpeedX = moveX * MaxSpeed;
+            targetSpeedY = moveY * MaxSpeed;
         } else {
             targetSpeedX = 0;
             targetSpeedY = 0;
@@ -142,10 +143,10 @@ public class Player extends Healable {
         speedX += Math.signum(targetSpeedX - speedX)*speedStep;
         speedY += Math.signum(targetSpeedY - speedY)*speedStep;
 
-        speedX = Math.max(-maxSpeed, Math.min(maxSpeed, speedX));
-        speedY = Math.max(-maxSpeed, Math.min(maxSpeed, speedY));
+        speedX = Math.max(-MaxSpeed, Math.min(MaxSpeed, speedX));
+        speedY = Math.max(-MaxSpeed, Math.min(MaxSpeed, speedY));
 
-        cm.move(speedX, speedY);
+        cm.move(Main.toSlowMotion(speedX), Main.toSlowMotion(speedY));
 
         if(Main.collisionMap.collisionWithWhoExcept(
                 mask, aabbComponent).size() > 0) {
@@ -158,23 +159,22 @@ public class Player extends Healable {
         this.yy = (int) y;
 
         if(!isDead)
-            for (int j = 0; j < 2; j++) {
-                int tone = random.nextInt(30)-15;
-                int sDir = random.nextInt(359);
-                int sDistance = random.nextInt(8);
-                int xx = this.xx + (int) (Math.cos(Math.toRadians(sDir)) * sDistance);
-                int yy = this.yy + (int) (Math.sin(Math.toRadians(sDir)) * sDistance);
-                int fadingSpeed = random.nextInt(8)+8;
-                int size = random.nextInt(4)+2;
-                Color color = new Color(baseColor.getRed()+tone, baseColor.getGreen()+tone, baseColor.getBlue()+tone);
-                UniParticle.FadingProcess fadingProcess = new UniParticle.FadingProcess(255, fadingSpeed, true);
-                particles.add(new UniParticle(xx, yy, size, true, color, fadingProcess));
-            }
+            if(random.nextDouble() <= SpeedController.calcSpeed())
+                for (int j = 0; j < 2; j++) {
+                    int tone = random.nextInt(30)-15;
+                    int sDir = random.nextInt(359);
+                    int sDistance = random.nextInt(10);
+                    int xx = this.xx + (int) (Math.cos(Math.toRadians(sDir)) * sDistance);
+                    int yy = this.yy + (int) (Math.sin(Math.toRadians(sDir)) * sDistance);
+                    int fadingSpeed = random.nextInt(8)+8;
+                    int size = random.nextInt(4)+2;
+                    Color color = new Color(baseColor.getRed()+tone, baseColor.getGreen()+tone, baseColor.getBlue()+tone);
+                    UniParticle.FadingProcess fadingProcess = new UniParticle.FadingProcess(255, fadingSpeed, true);
+                    particles.add(new UniParticle(xx, yy, size, true, color, fadingProcess));
+                }
 
         particles.forEach(UniParticle::update);
         particles.removeIf(particle -> particle.dead);
-
-        Main.slowMotionSpeed = (float)AdvancedMath.setRange(Main.slowMotionSpeed, 0.4d, 1d);
 
         this.mask.x = x;
         this.mask.y = y;

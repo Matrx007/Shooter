@@ -41,8 +41,7 @@ public class Button {
         Iterator<Vec3d> iterator = hoverVectors.iterator();
         for(;iterator.hasNext();) {
             Vec3d vec = iterator.next();
-            if(!mouseHover || (vec).y > 0.2d)
-                vec.y /= 1.05;
+            vec.y /= 1.05;
             vec.z -= 0.05;
             if(vec.y <= 0.003) {
                 iterator.remove();
@@ -59,6 +58,9 @@ public class Button {
 
     public void render(Renderer r) {
         r.absolute();
+        if(mouseHover)
+            r.fillRectangle(0, y, width, 24,
+                    new Color(255, 255, 255, 32));
         for(Vec3d vec : hoverVectors) {
             int w = (int)((1 - vec.z)*width*2d);
             r.fillRectangle((int)vec.x-w/2d, y, w, 24,

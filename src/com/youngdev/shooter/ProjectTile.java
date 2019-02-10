@@ -102,7 +102,7 @@ public class ProjectTile extends WorldObject {
     }
 
     private boolean calculateProbability() {
-        return random.nextDouble() <= Main.slowMotionSpeed;
+        return random.nextDouble() <= SpeedController.calcSpeed();
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.youngdev.shooter;
 
+import com.engine.libs.game.Mask;
 import com.engine.libs.input.Input;
 import com.engine.libs.math.AdvancedMath;
 import com.engine.libs.rendering.Renderer;
@@ -8,68 +9,94 @@ import java.awt.*;
 import java.util.Random;
 
 public class Fly extends WorldObject {
-    public boolean state; // TRUE - Idle, FALSE - Fly away
+    public boolean wandering; // TRUE - Idle, FALSE - Fly away
     private double targetX, targetY, speed;
     public double angle;
     public final int Type = 5;
     private int minDistanceToFlyAway, flyCounter;
     public double direction;
     private double prevX, prevY;
+    private static long lastSound;
 
     public Fly(int x, int y) {
         super(3, 15, 5);
         this.x = x;
         this.y = y;
         this.speed = 0;
-        this.state = true;
+        this.wandering = true;
 
         targetX = x + random.nextInt(32) - 16;
         targetY = y + random.nextInt(32) - 16;
 
         minDistanceToFlyAway = 75 + random.nextInt(75);
+
+        this.mask = new Mask.Rectangle(x-8, y-8, 16, 16);
     }
 
-    public Fly(int x, int y, boolean state) {
+    public Fly(int x, int y, boolean wander) {
         super(5, 35, 5);
         this.x = x;
         this.y = y;
         this.speed = 0;
-        this.state = state;
+        this.wandering = wander;
+        if(!wander) flyAwaySound();
         this.random = new Random();
         targetX = x + random.nextInt(32) - 16;
         targetY = y + random.nextInt(32) - 16;
         flyCounter = 0;
 
         minDistanceToFlyAway = 75 + random.nextInt(75);
+        this.mask = new Mask.Rectangle(x-8, y-8, 16, 16);
     }
 
     @Override
     public void update(Input input) {
         if(dead) return;
-        if(state) {
-            {
-                if(distance(x, y, targetX, targetY) < 4) {
-                    targetX = x + random.nextInt(64) - 32;
-                    targetY = y + random.nextInt(64) - 32;
-                } else {
-                    x += Main.toSlowMotion((targetX - x) * 0.025);
-                    y += Main.toSlowMotion((targetY - y) * 0.025);
-                }
+
+        if(wandering) {
+            Player player = Main.main.player;
+            if (AdvancedMath.inRange(player.x, player.y,
+                    x - 80,y - 80,
+                    160, 160)) {
+                wandering = false;
+                angle = angle(player.x, player.y, x, y)-180;
+                if(!Main.main.visibleAreaMask.isColliding((int)x, (int)y))
+                    dead = true;
+                else flyAwaySound();
+            } else for (WorldObject o : Main.main.visibleChunkEntities) {
+                if(o instanceof Rabbit)
+                    if (AdvancedMath.inRange(o.x, o.y, x - 80,
+                            y - 80, 160, 160)) {
+                        wandering = false;
+                        angle = angle(o.x, o.y, x, y)-180;
+                        if(!Main.main.visibleAreaMask.isColliding((int)x, (int)y))
+                            dead = true;
+                        else flyAwaySound();
+                        break;
+                    }
+            }
+        }
+
+        if(wandering) {
+            if(distance(x, y, targetX, targetY) < 4) {
+                targetX = x + random.nextInt(64) - 32;
+                targetY = y + random.nextInt(64) - 32;
+            } else {
+                x += Main.toSlowMotion((targetX - x) * 0.025);
+                y += Main.toSlowMotion((targetY - y) * 0.025);
             }
         } else {
             x += Main.toSlowMotion(Math.cos(Math.toRadians(angle))*speed);
             y += Main.toSlowMotion(Math.sin(Math.toRadians(angle))*speed);
-            speed+=0.125;
+            speed += 0.0625;
 
-            Camera camera = Main.main.camera;
-            if(!AdvancedMath.inRange(x, y, camera.cX, camera.cY,
-                    camera.cX+Main.main.getE().width,
-                    camera.cY+Main.main.getE().height)) {
+            if(!Main.main.visibleAreaMask.isColliding((int)x, (int)y)) {
                 dead = true;
             }
         }
 
-        direction = Fly.angle(prevX, prevY, x, y);
+        if(SpeedController.calcSpeed() != 0)
+            direction = Fly.angle(prevX, prevY, x, y);
 
         prevX = x;
         prevY = y;
@@ -105,6 +132,19 @@ public class Fly extends WorldObject {
                 rotatePoint(x-2, y+2, x, y, direction-90)
         };
         fillPoly(points, Color.yellow, r);
+    }
+
+    private void flyAwaySound() {
+        if(Main.startMenuMode) return;
+
+        long time = System.currentTimeMillis();
+        if(time-lastSound > 150) {
+            lastSound = time;
+            double distance = distance(x, y,
+                    Main.main.player.x, Main.main.player.y);
+            float gain = -Math.max(20f, 80f / (float) distance * 15f);
+            Main.main.soundManager.playSound("flyAway", gain);
+        }
     }
 
     @Override
@@ -199,7 +239,7 @@ public class Fly extends WorldObject {
             }
 
             if (minDis < minDistanceToFlyAway && closestEnemy != null) {
-                state = false;
+                wandering = false;
                 angle = angle(closestEnemy.scoreX, closestEnemy.scoreY,
                         scoreX, scoreY)-180+random.nextInt(90)-45;
                 if(Main.main.isPixelOnScreen((int)scoreX, (int)scoreY)) {

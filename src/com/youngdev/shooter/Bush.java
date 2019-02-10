@@ -125,7 +125,7 @@ public class Bush extends WorldObject {
             double angle = random.nextDouble()*360;
             int xx = (int)(x+Math.cos(Math.toRadians(angle))*distance);
             int yy = (int)(y+Math.sin(Math.toRadians(angle))*distance);
-            int size = (int)((random.nextInt(24)+24f)*(i/numLeaf+0.5f));
+            int size = (int)((random.nextInt(32)+24f)*(i/numLeaf+0.5f));
             leaf.add(new Leaf(xx, yy, size, random.nextInt(15), random.nextInt(359)));
 
             smallestX = Math.min(smallestX, xx-size/2);
@@ -141,7 +141,7 @@ public class Bush extends WorldObject {
         public int x, y, addX, addY, size, tone;
         public double speed, step;
         //49, 107, 38
-        public Color baseColor = new Color(29, 87, 18);
+        public Color baseColor = new Color(39, 97, 28);
 
         public Leaf(int x, int y, int size, int tone, int step) {
             this.x = x;

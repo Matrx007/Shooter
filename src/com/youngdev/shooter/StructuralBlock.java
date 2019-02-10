@@ -13,8 +13,10 @@ public class StructuralBlock extends WorldObject {
     public int type;
     public ArrayList<UniParticle> particles;
     public final int Type = 10;
+    public static final int SIZE = 32;
 
-    public static final int TYPE_ROCKS = 1, TYPE_WOOD = 2, TYPE_FIBER = 3, TYPE_WOOD_FLOORING = 4;
+    public static final int TYPE_ROCKS = 1, TYPE_WOOD = 2, TYPE_FIBER = 3, TYPE_WOOD_FLOORING = 4,
+            TYPE_STONE_FLOORING = 5;
 
     public StructuralBlock(int x, int y, int type) {
         super(8, 8, 10);
@@ -22,28 +24,44 @@ public class StructuralBlock extends WorldObject {
         this.x = x;
         this.y = y;
 
-        Random random = new Random();
         particles = new ArrayList<>();
 
-        if(type == TYPE_ROCKS) {
+        double _depth = 0;
+        if(type == TYPE_STONE_FLOORING) {
+            this.solid = false;
+            _depth = 0;
+            int numRocks = random.nextInt(5) + 5;
+            for (int i = 0; i < numRocks; i++) {
+                int xx = x + random.nextInt(SIZE);
+                int yy = y + random.nextInt(SIZE);
+                int tone = random.nextInt(3) - 5;
+                tone *= 5;
+                Color color = new Color(120 + tone, 120 + tone, 120 + tone);
+                particles.add(new UniParticle(xx, yy,
+                        random.nextInt(3) + 4,
+                        true, color));
+            }
+        } else if(type == TYPE_ROCKS) {
             this.solid = true;
-            this.depth = 14;
+            _depth = 1;
             int numRocks = random.nextInt(10) + 20;
             for (int i = 0; i < numRocks; i++) {
-                int xx = x + random.nextInt(12) + 3;
-                int yy = y + random.nextInt(12) + 3;
+                int xx = x + random.nextInt(SIZE);
+                int yy = y + random.nextInt(SIZE);
                 int tone = random.nextInt(3) - 5;
                 tone *= 5;
                 Color color = new Color(80 + tone, 80 + tone, 80 + tone);
-                particles.add(new UniParticle(xx, yy, random.nextInt(3) + 7, true, color));
+                particles.add(new UniParticle(xx, yy,
+                        random.nextInt(3) + 7,
+                        true, color));
             }
         } else if (type == TYPE_WOOD) {
             this.solid = true;
-            this.depth = 7;
+            _depth = 0;
             int numPieces = random.nextInt(10) + 20;
             for (int i = 0; i < numPieces; i++) {
-                int xx = x + random.nextInt(12) + 3;
-                int yy = y + random.nextInt(12) + 3;
+                int xx = x + random.nextInt(SIZE);
+                int yy = y + random.nextInt(SIZE);
                 int tone = random.nextInt(3) - 5;
                 tone *= 5;
                 Color baseColor = new Color(158, 109, 80);
@@ -51,15 +69,17 @@ public class StructuralBlock extends WorldObject {
                         baseColor.getRed() + tone,
                         baseColor.getGreen() + tone,
                         baseColor.getBlue() + tone);
-                particles.add(new UniParticle(xx, yy, random.nextInt(3) + 7, true, color));
+                particles.add(new UniParticle(xx, yy,
+                        random.nextInt(3) + 7,
+                        true, color));
             }
         } else if (type == TYPE_FIBER) {
             this.solid = true;
-            this.depth = 7;
+            _depth = 0;
             int numPieces = random.nextInt(10) + 20;
             for (int i = 0; i < numPieces; i++) {
-                int xx = x + random.nextInt(12) + 3;
-                int yy = y + random.nextInt(12) + 3;
+                int xx = x + random.nextInt(SIZE);
+                int yy = y + random.nextInt(SIZE);
                 int tone = random.nextInt(3) - 5;
                 tone *= 5;
                 Color baseColor = new Color(128, 79, 50);
@@ -67,15 +87,17 @@ public class StructuralBlock extends WorldObject {
                         baseColor.getRed() + tone,
                         baseColor.getGreen() + tone,
                         baseColor.getBlue() + tone);
-                particles.add(new UniParticle(xx, yy, random.nextInt(3) + 7, true, color));
+                particles.add(new UniParticle(xx, yy,
+                        random.nextInt(3) + 7,
+                        true, color));
             }
         } else if (type == TYPE_WOOD_FLOORING) {
             this.solid = false;
-            this.depth = 7;
+            _depth = 0;
             int numPieces = random.nextInt(10) + 20;
             for (int i = 0; i < numPieces; i++) {
-                int xx = x + random.nextInt(12) + 3;
-                int yy = y + random.nextInt(12) + 3;
+                int xx = x + random.nextInt(SIZE);
+                int yy = y + random.nextInt(SIZE);
                 int tone = random.nextInt(3) - 5;
                 tone *= 5;
                 Color baseColor = new Color(178, 139, 100);
@@ -83,26 +105,26 @@ public class StructuralBlock extends WorldObject {
                         baseColor.getRed() + tone,
                         baseColor.getGreen() + tone,
                         baseColor.getBlue() + tone);
-                particles.add(new UniParticle(xx, yy, random.nextInt(3) + 7, true, color));
+                particles.add(new UniParticle(xx, yy,
+                        random.nextInt(3) + 7,
+                        true, color));
             }
         }
+        this.depth = 8 * 1024 + random.nextInt(
+                1+(int)(1023d*_depth));
 
-        this.mask = new Mask.Rectangle(x, y, 16, 16);
+        this.mask = new Mask.Rectangle(x, y, SIZE, SIZE);
         if(solid)
             this.aabbComponent = new AABBComponent(this.mask);
     }
 
     @Override
     public void update(Input input) {
-        particles.removeIf(p -> {
-            p.update();
-            return p.dead;
-        });
     }
 
     @Override
-    public void render(Renderer renderer) {
-        particles.forEach(p -> p.render(renderer));
+    public void render(Renderer r) {
+        particles.forEach(p -> p.render(r));
     }
 
     public void render(Renderer r, int x, int y) {

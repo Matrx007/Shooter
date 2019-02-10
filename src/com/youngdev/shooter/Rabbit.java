@@ -1,5 +1,6 @@
 package com.youngdev.shooter;
 
+import com.engine.libs.game.GameObject;
 import com.engine.libs.game.Mask;
 import com.engine.libs.game.behaviors.AABBCollisionManager;
 import com.engine.libs.game.behaviors.AABBComponent;
@@ -7,6 +8,7 @@ import com.engine.libs.input.Input;
 import com.engine.libs.rendering.Renderer;
 
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.Random;
 
 public class Rabbit extends Healable {
@@ -72,23 +74,36 @@ public class Rabbit extends Healable {
         direction += Main.toSlowMotion((directionTarget - direction) * 0.25d);
         speed += Main.toSlowMotion((speedTarget - speed) * 0.1);
 
-        if (i.isButton(1) && this.mask.isColliding(
-                i.getRelativeMouseX(), i.getRelativeMouseY())) {
-            double oldX = aabbComponent.area.x;
-            double oldY = aabbComponent.area.y;
-            cm.unstuck();
-            double diffX = aabbComponent.area.x-oldX;
-            double diffY = aabbComponent.area.y-oldY;
-        } else {
-            if (Main.collisionMap.collisionWithExcept(mask, aabbComponent)) {
-                cm.unstuck();
+        if (Main.collisionMap.collisionWithExcept(mask, aabbComponent)) {
+//            cm.unstuck();
+            int k = 16;
+            while (Main.collisionMap.collisionWithExcept(mask, aabbComponent)
+                    && k > 0) {
+                ArrayList<Mask> objs =
+                        Main.collisionMap.collisionWithWho(mask);
+                if(objs.size() > 0) {
+                    Mask mask = objs.get(0);
+                    if(mask instanceof Mask.Rectangle) {
+                        double dir = Fly.angle(x, y,
+                                mask.x+((Mask.Rectangle) mask).w/2d,
+                                mask.y+((Mask.Rectangle) mask).h/2d);
+                        double addX = Math.cos(Math.toRadians(dir)) * 8d;
+                        double addY = Math.sin(Math.toRadians(dir)) * 8d;
+
+                        x += addX;
+                        y += addY;
+
+                        this.mask.move(addX, addY);
+                    }
+                }
+                k--;
             }
-            double spd = Main.toSlowMotion(speed);
-            cm.move(Math.cos(Math.toRadians(direction)) * Main.toSlowMotion(
-                    (1 - (step % 150) / 150d) * spd * 2d),
-                    Math.sin(Math.toRadians(direction)) * Main.toSlowMotion(
-                            (1 - (step % 150) / 150d) * spd * 2d));
         }
+        double spd = Main.toSlowMotion(speed);
+        cm.move(Math.cos(Math.toRadians(direction)) * Main.toSlowMotion(
+                (1 - (step % 150) / 150d) * spd * 2d),
+                Math.sin(Math.toRadians(direction)) * Main.toSlowMotion(
+                        (1 - (step % 150) / 150d) * spd * 2d));
     }
 
     @Override

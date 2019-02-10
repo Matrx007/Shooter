@@ -12,6 +12,7 @@ import com.engine.libs.rendering.Image;
 import com.engine.libs.rendering.RenderUtils;
 import com.engine.libs.rendering.Renderer;
 import com.engine.libs.world.CollisionMap;
+import com.sun.javafx.geom.Vec2d;
 import com.sun.javafx.geom.Vec3d;
 
 import javax.imageio.ImageIO;
@@ -21,8 +22,6 @@ import javax.swing.filechooser.FileFilter;
 import java.awt.*;
 import java.awt.geom.Area;
 import java.awt.image.BufferedImage;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
@@ -47,8 +46,6 @@ public class Main extends Game {
     private boolean findOnScreenBlocked, findOnScreenCalled;
     private boolean usesChunkRenderer;
     boolean showDebugInfo;
-    static float slowMotionSpeed = 1f;
-    private static  float slowMotionMultiplier = 1f;
     private Random random;
     public Camera camera;
     static CollisionMap collisionMap;
@@ -77,6 +74,9 @@ public class Main extends Game {
     private Area onScreenPuddles;
     private ArrayList<Vec3d> puddleWaves;
     UI ui;
+    ArrayList<Vec2d> entitiesOnScreen;
+    public static int DuleKivaHaruldus = 10;
+    private Button[] mainMenuButtons;
 
     // *** SOUNDS ***
     private Clip noise;
@@ -96,6 +96,7 @@ public class Main extends Game {
     public Main() {
         main = this;
         int size = 25;
+
         width = 16*size;
         height = 9*size;
 
@@ -110,15 +111,14 @@ public class Main extends Game {
 
         // HERE: Init
 
-        buttonLabels = new String[] {
-                "DuleKiva",
-                "Lahku mängust"
+        mainMenuButtons = new Button[]{
+                new Button(64, "Klassikaline"),
+                new Button(96, "Muuda taskust"),
+                new Button(128, "Lahku mängust")
         };
-        numButtons = 2;
-        buttonImages = new BufferedImage[numButtons];
-        buttonPrevInside = new boolean[numButtons];
 
         playerEntities = new ArrayList<>();
+        entitiesOnScreen = new ArrayList<>();
         visibleAreaMask = null;
         onScreenPuddles = new Area();
         coinSoundCounter = 0;
@@ -210,51 +210,6 @@ public class Main extends Game {
         gameLogo = new BufferedImage((int)newWidth, (int)newHeight,
                 BufferedImage.TYPE_INT_ARGB);
         gameLogo.getGraphics().drawImage(logo, 0,0, null);
-        /* gameLogo = RenderUtils.createImage(e.width, 48, false);
-        Graphics2D g2 = (Graphics2D) gameLogo.getGraphics();
-        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
-                RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
-
-        String text = "DuleKiva";
-        GradientPaint gradientPaint = new GradientPaint(0, 0, grassColor,
-                0, gameLogo.getHeight(), new Color(
-                        grassColor.getRed(),
-                        grassColor.getGreen(),
-                        grassColor.getBlue(),
-                        0
-        ));
-        g2.setPaint(gradientPaint);
-        g2.fillRect(0, 0, gameLogo.getWidth(), gameLogo.getHeight());
-        g2.setPaint(null);
-        g2.setStroke(new BasicStroke(4f));
-        g2.setFont(new Font("Nunito Bold", Font.PLAIN, 24));
-
-        FontMetrics fontMetrics = g2.getFontMetrics();
-        Rectangle2D textBounds = fontMetrics.getStringBounds(text, g2);
-
-        g2.setColor(Color.black);
-        g2.drawString(text, (int)(gameLogo.getWidth()-textBounds.getWidth())/2,
-                32);*/
-
-        startMenuButtonParticles = new ArrayList<>();
-
-        buttonHoverVectors = new ArrayList[numButtons];
-
-        for(int i = 0; i < numButtons; i++) {
-            BufferedImage image = RenderUtils.createImage(192, 24);
-            Graphics2D g = (Graphics2D) image.getGraphics();
-            g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
-                    RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
-
-            g.setStroke(new BasicStroke(2f));
-            g.setColor(Color.black);
-            g.setFont(new Font("Nunito Bold", Font.PLAIN, 16));
-            g.drawString(buttonLabels[i], 8, 16);
-
-            buttonHoverVectors[i] = new ArrayList<>();
-
-            buttonImages[i] = image;
-        }
 
         ui = new UI();
 
@@ -263,6 +218,8 @@ public class Main extends Game {
         noise.stop();
         music.loop(Clip.LOOP_CONTINUOUSLY);
         noise.loop(Clip.LOOP_CONTINUOUSLY);
+
+        restart();
 
         e.run();
     }
@@ -278,7 +235,7 @@ public class Main extends Game {
         soundManager.addClip("sounds/noiseLow.wav", "noise");
         soundManager.addClip("sounds/buttonHoverBass.wav", "buttonHover");
         soundManager.addClip("sounds/buttonPressedBass.wav", "buttonPress");
-        soundManager.addClip("sounds/flyAway.wav", "flyAway");
+        soundManager.addClip("sounds/beeFlyingAway.wav", "flyAway");
 
         soundManager.addClip("sounds/footsteps/dirt1.wav", "dirt0");
         soundManager.addClip("sounds/footsteps/dirt2.wav", "dirt1");
@@ -307,6 +264,42 @@ public class Main extends Game {
         soundManager.addClip("sounds/gameover.wav", "gameOver");
     }
 
+    private void createSpawn() {
+        if(player != null && !startMenuMode) {
+            int playerLocX = getChunkLocation(
+                    (int)player.x, (int)player.y).x;
+            int playerLocY = getChunkLocation(
+                    (int)player.x, (int)player.y).y;
+
+            double midX = player.x;
+            double midY = player.y;
+
+            for(int i = -2; i < 3; i++) {
+                for (int j = -2; j < 3; j++) {
+                    int cX = playerLocX+i;
+                    int cY = playerLocY+j;
+
+                    ArrayList<GameObject> chunk = new ArrayList<>();
+                    chunks.put(new Point(cX, cY), chunk);
+                    if(random.nextBoolean())
+                        chunk.add(new Terrain(
+                                cX *chunkSize+random.nextInt(
+                                        chunkSize),
+                                cY *chunkSize+random.nextInt(
+                                        chunkSize), random.nextBoolean() ?
+                                Terrain.TYPE_DIRT_PATCH :
+                                Terrain.TYPE_SMALL_ROCKS));
+                }
+            }
+        }
+
+        /*getChunkArray(cX, cY).removeIf((o) ->
+                            o instanceof Tree ||
+                            o instanceof Rabbit ||
+                            o instanceof DuleKiva ||
+                            o instanceof Puddle);*/
+    }
+
     public void deleteChunk(int x, int y) {
         chunks.remove(new Point(x, y));
     }
@@ -315,12 +308,13 @@ public class Main extends Game {
         ArrayList<GameObject> chunk = new ArrayList<>();
         HashSet<WorldObject> chunkEntities = new HashSet<>();
 
-        Random random = new Random();
+        SplittableRandom random = new SplittableRandom();
 
         int minX = x*chunkSize;
         int minY = y*chunkSize;
 
-        if(random.nextInt(10) == 0) {
+        if(DuleKivaHaruldus == 0 ||
+                random.nextInt(DuleKivaHaruldus) == 0) {
             chunkEntities.add(new DuleKiva(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY));
         }
 
@@ -352,10 +346,10 @@ public class Main extends Game {
         }
 
         if(random.nextInt(8)==1) {
-            chunkEntities.add(new FlyGroup(minX+chunkSize/2,
-                    minY+chunkSize/2,
-                    random.nextInt(15)+10));
-            /*int xx = random.nextInt(chunkSize);
+//            chunkEntities.add(new FlyGroup(minX+chunkSize/2,
+//                    minY+chunkSize/2,
+//                    random.nextInt(15)+10));
+            int xx = random.nextInt(chunkSize);
             int yy = random.nextInt(chunkSize);
             for(int i = 0; i < random.nextInt(15)+15; i++) {
                 double angle = random.nextInt(359);
@@ -364,7 +358,7 @@ public class Main extends Game {
                 int yyy = minY + yy + (int) (Math.sin(Math.toRadians(angle))*distance);
                 flies.add(new Fly(xxx, yyy));
 //                System.out.println("Spawned a fly at ("+xxx+","+yyy+")");
-            }*/
+            }
         }
 
         if(random.nextInt(4)==1) {
@@ -489,7 +483,7 @@ public class Main extends Game {
     public void addEntity(WorldObject entity) {
         int cX = Math.floorDiv((int)entity.x, chunkSize);
         int cY = Math.floorDiv((int)entity.y, chunkSize);
-        chunkEntities.get(new Point(cX, cY)).add(entity);
+        getChunkEntitiesArray(cX, cY).add(entity);
     }
 
     void findOnScreenObjects() {
@@ -517,10 +511,11 @@ public class Main extends Game {
         ArrayList<GameObject> visibleChunksObjectsTemporary = new ArrayList<>();
         ArrayList<GameObject> addQueue = new ArrayList<>();
         visibleChunkEntities.clear();
+        entitiesOnScreen.clear();
         if(!startMenuMode) {
             addQueue.add(player);
         }
-        addQueue.add(puddleRenderer);
+//        addQueue.add(puddleRenderer);
 
         // HERE: Add additional ones that are partly on screen
         for(int xx = chunkXTopLeft-4; xx < chunkXBottomRight+4; xx++) {
@@ -567,6 +562,7 @@ public class Main extends Game {
                                     isColliding(visibleAreaMask))) {
                         addQueue.add(obj);
                         visibleChunkEntities.add(obj);
+                        entitiesOnScreen.add(new Vec2d(obj.x, obj.y));
                     }
                     return obj.dead;
                 });
@@ -622,65 +618,36 @@ public class Main extends Game {
     public void update(Core core) {
         Input i = core.getInput();
 
+        SpeedController.resetMultipliers();
+
         tick++;
         if(tick > 59) {
             tick = 0;
             flySoundCounter = 0;
         }
 
-        if(startMenuMode) {
-            camera.bluishEffect = 1f;
-            int x = core.getInput().getMouseX();
-            int y = core.getInput().getMouseY();
-            for(int k = 0; k < numButtons; k++) {
-                int xx = 16;
-                int yy = 64+32*k;
-                boolean inside = false;
-                if(AdvancedMath.inRange(x, y, 0, yy, width, 24)) {
-                    inside = true;
-
-                    if(!startMenuButtons_prevHover[k])
-                        buttonHoverVectors[k].add(new Vec3d(
-                                i.getMouseX(), 1d, 1d));
-
-                    if(!startMenuButtons_prevHover[k]) {
-                        soundManager.playSound("buttonHover");
-                    }
-
-                    if(i.isButtonDown(1)) {
-                        if(k == 0) {
-                            // TODO: Start the game
-                            startMenuMode = false;
-                        }
-                        soundManager.playSound("buttonPress");
-                    }
-                    startMenuButtons_prevHover[k] = true;
-                } else {
-                    startMenuButtons_prevHover[k] = false;
-                }
-                Iterator iterator = buttonHoverVectors[k].iterator();
-                for(;iterator.hasNext();) {
-                    Object obj = iterator.next();
-                    if(obj instanceof Vec3d) {
-                        if(!inside || ((Vec3d)obj).y > 0.4d)
-                            ((Vec3d) obj).y /= 1.05;
-                        ((Vec3d) obj).z -= 0.05;
-//                            ((Vec3d) obj).z -= 0.01;
-                        if(((Vec3d) obj).y <= 0.003) {
-                            iterator.remove();
-                        }
-                    }
-                }
+        if(startMenuMode && !ui.settings) {
+            for (Button button : mainMenuButtons) {
+                button.update(i);
             }
 
-            startMenuButtonParticles.removeIf(p -> {
-                if(p.dead) {
-                    return true;
-                } else {
-                    p.update();
-                    return false;
-                }
-            });
+            if(mainMenuButtons[0].pressed) {
+                DuleKiva.SpawnSpeed = 120d;
+                Player.MaxSpeed = 3f;
+                Player.MaxHealth = 5;
+                Main.DuleKivaHaruldus = 10;
+                ui.speedMultiplier = 1f;
+                SpeedController.resetMultipliers();
+                startMenuMode = false;
+            }
+
+            if(mainMenuButtons[1].pressed) {
+                ui.settings = true;
+            }
+
+            if(mainMenuButtons[2].pressed) {
+                System.exit(0);
+            }
         } else {
             ui.update(i);
         }
@@ -699,14 +666,14 @@ public class Main extends Game {
                 e.getRenderer().getCamY()+e.height);
         for (int xx = chunkXTopLeft - 4; xx < chunkXBottomRight + 4; xx++) {
             for (int yy = chunkYTopLeft - 4; yy < chunkYBottomRight + 4; yy++) {
-                if (getChunkArray(xx, yy).size() == 0) {
+                if (!chunks.containsKey(new Point(xx, yy))) {
                     generateChunk(xx, yy);
                 }
             }
         }
         findOnScreenObjects();
 
-        // ### - ###
+        // ### Update world ###
         while(!moveChunkEntities.isEmpty()) {
             MoveTo move = moveChunkEntities.pollFirst();
             if(move != null) {
@@ -732,10 +699,10 @@ public class Main extends Game {
             }
         }
 
-        /*puddleWaves.removeIf(wave -> {
+        puddleWaves.removeIf(wave -> {
             wave.z += 0.0125;
             return wave.z > 1;
-        });*/
+        });
 
 //        onScreenPuddles.reset();
         if(!startMenuMode)
@@ -749,7 +716,14 @@ public class Main extends Game {
             if(obj instanceof WorldObject) {
                 if(obj instanceof Puddle) {
                     obj.update(core.getInput());
-//                    onScreenPuddles.add(((Puddle)obj).area);
+                    /*Area puddleArea = ((Puddle) obj).area;
+                    Rectangle bounds = puddleArea.getBounds();
+                    if(new Mask.Rectangle(bounds.getX(),
+                            bounds.getY(), (int)bounds.getWidth()+1,
+                            (int)bounds.getHeight()+1).isColliding(
+                                    visibleAreaMask)) {
+                        onScreenPuddles.add(puddleArea);
+                    }*/ // Puddle effects
                 } else if (!(obj instanceof Tree) && !(obj instanceof Rocks)) {
                     double prevX = obj.x;
                     double prevY = obj.y;
@@ -759,8 +733,8 @@ public class Main extends Game {
             }
         }
 
-        // ### Update Entities ###
-        Iterator<WorldObject> it5;
+        // ### Find entities on puddles ###
+        /*Iterator<WorldObject> it5;
         for(it5 = Main.main.visibleChunkEntities.iterator(); it5.hasNext();) {
             WorldObject obj = it5.next();
             if(obj instanceof Rabbit || obj instanceof Coin) {
@@ -768,7 +742,7 @@ public class Main extends Game {
                     createWave(obj.x, obj.y);
                 }
             }
-        }
+        }*/
 
         cursor.update(i);
         e.getWindow().getFrame().setTitle("DuleKiva  FPS: "+e.getFps());
@@ -814,6 +788,8 @@ public class Main extends Game {
                 noise.loop(Clip.LOOP_CONTINUOUSLY);
                 camera.cX = player.x-width/2d;
                 camera.cY = player.y-height/2d;
+//                restart();
+                createSpawn();
             }
         }
         startMenuModePrev = startMenuMode;
@@ -894,11 +870,11 @@ public class Main extends Game {
     }
 
     public static int toSlowMotion(int amount) {
-        return (int)(amount*slowMotionSpeed* slowMotionMultiplier);
+        return (int)(amount*SpeedController.calcSpeed());
     }
 
     public static double toSlowMotion(double amount) {
-        return amount*slowMotionSpeed* slowMotionMultiplier;
+        return amount*SpeedController.calcSpeed();
     }
 
     @Override
@@ -960,13 +936,13 @@ public class Main extends Game {
                 double fx = camera.blackAndWhiteEffect;
 
                 int rsltRed = (int) StrictMath.round((fxInverted * oldRed) +
-                        StrictMath.min(fx * blcAndWhtRslt * 0.8d, 255d));
+                        StrictMath.min(fx * blcAndWhtRslt * 0.9d, 255d));
                 int rsltGrn = (int) StrictMath.round((fxInverted * oldGrn) +
                         StrictMath.min(fx * blcAndWhtRslt, 255d));
                 int rsltBlu = (int) StrictMath.round((fxInverted * oldBlu) +
-                        StrictMath.min(fx * blcAndWhtRslt * 0.7d, 255d));
+                        StrictMath.min(fx * blcAndWhtRslt * 0.8d, 255d));
 
-                result = new Color(rsltRed, rsltGrn, rsltBlu);
+                result = new Color(rsltRed, rsltGrn, rsltBlu, newC.getAlpha());
             }
 
             return result;
@@ -1044,7 +1020,11 @@ public class Main extends Game {
             y += addY;
             r.drawText("Generated chunks: " + chunks.size(), 8, y, 10, Color.black);
             y += addY;
-            r.drawText("Flies: " + flies.size(), 8, y, 10, Color.black);
+            y += addY;
+            r.drawText("Game Speed: " + SpeedController.calcSpeed()+
+                    " ("+SpeedController.getSpeed()+" x "+
+                    SpeedController.getMultiplier()+")",
+                    8, y, 10, Color.black);
             y += addY;
             r.drawText("Visible chunk objects: " + visibleChunkObjects.size(), 8, y, 10, Color.black);
         }
@@ -1056,32 +1036,15 @@ public class Main extends Game {
         // ╔═══════════════════════════════════╗
         // ║ R E N D E R    M A I N    M E N U ║
         // ╚═══════════════════════════════════╝
-        if(startMenuMode) {
+        if(startMenuMode && !ui.settings) {
             r.absolute();
             r.drawImage((e.width-gameLogo.getWidth())/2d,
                     0, gameLogo);
 
             // HERE: Render buttons
-            int y = 64;
-            int x = 16;
-            Shape clip = r.getG().getClip();
-            for (int i = 0; i < numButtons; i++) {
-                r.setClip(0, y, width,
-                        buttonImages[i].getHeight());
-                for(Object obj : buttonHoverVectors[i]) {
-                    if(obj instanceof Vec3d) {
-                        int w = (int)((1 - ((Vec3d) obj).z)*width*2d);
-                        r.fillRectangle((int)((Vec3d) obj).x-w/2d, y, w,
-                                buttonImages[i].getHeight(),
-                                new Color(255, 255, 255,
-                                        (int)(((Vec3d) obj).y*128d)));
-                    }
-                }
-                r.drawImage(x, y, buttonImages[i]);
-                y += 32;
+            for (Button button : mainMenuButtons) {
+                button.render(r);
             }
-            r.getG().setClip(clip);
-            startMenuButtonParticles.forEach(p -> p.render(r));
         } else {
             r.absolute();
             ui.render(r);
@@ -1104,8 +1067,10 @@ public class Main extends Game {
         camera.bitCrushEffect = 0f;
         random.setSeed(random.nextLong());
         camera.blackAndWhiteEffect = 0f;
-        slowMotionSpeed = 1f;
-        camera.bluishEffect = 0f;
+        SpeedController.resetMultipliers();
+        SpeedController.setSpeed(1f);
+        camera.bluishEffect = 1f;
+        createSpawn();
     }
 
     private class MoveTo {

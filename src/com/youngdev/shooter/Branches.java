@@ -36,7 +36,7 @@ public class Branches extends WorldObject {
 
             particles.add(createParticle((int)xx, (int)yy));
         }
-        this.mask = new Mask.Rectangle(x-30, y-30, 60, 60);
+        findBounds();
     }
 
     public UniParticle createParticle(int addX, int addY) {
@@ -159,6 +159,11 @@ public class Branches extends WorldObject {
 
     @Override
     public void update(Input i) {
+        particles.forEach(UniParticle::update);
+        findBounds();
+    }
+
+    private void findBounds() {
         smallestX=Integer.MAX_VALUE;
         smallestY=Integer.MAX_VALUE;
         largestX=Integer.MIN_VALUE;
@@ -169,19 +174,13 @@ public class Branches extends WorldObject {
             smallestY = Math.min(smallestY, p.y);
             largestX = Math.max(largestX, p.x);
             largestY = Math.max(largestY, p.y);
-//            System.out.println("p.scoreX = " + p.scoreX);
-//            System.out.println("p.scoreY = " + p.scoreY);
-            p.update();
-//            System.out.println("====");
-//            System.out.println("p.scoreX = " + p.scoreX);
-//            System.out.println("p.scoreY = " + p.scoreY);
         });
 
         mask = new Mask.Rectangle(
-                (int)smallestX-10,
-                (int)smallestY-10,
-                (int)largestX-smallestX+20,
-                (int)largestY-smallestY+20);
+                smallestX -10,
+                smallestY -10,
+                largestX -smallestX+20,
+                largestY -smallestY+20);
     }
 
     @Override
