@@ -17,6 +17,7 @@ import com.sun.javafx.geom.Vec3d;
 
 import javax.imageio.ImageIO;
 import javax.sound.sampled.Clip;
+import javax.sound.sampled.FloatControl;
 import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
 import java.awt.*;
@@ -33,9 +34,10 @@ import static java.awt.event.KeyEvent.*;
 public class Main extends Game {
     public static Main main;
 
-    public static int chunkSize = 128;
-    public int flySoundCounter;
-    public int coinSoundCounter;
+    static int chunkSize = 128;
+    FloatControl noiseVolume;
+    int flySoundCounter;
+    int coinSoundCounter;
     private int hoverChunkX, hoverChunkY;
     private static int chunkXTopLeft;
     private static int chunkYTopLeft;
@@ -97,8 +99,8 @@ public class Main extends Game {
         main = this;
         int size = 25;
 
-        width = 16*size;
-        height = 9*size;
+        width = 16 * size;
+        height = 9 * size;
 
         e.width = width;
         e.height = height;
@@ -110,12 +112,16 @@ public class Main extends Game {
         e.start();
 
         // HERE: Init
+        e.getWindow().getFrame().setTitle("DuleKiva");
 
         mainMenuButtons = new Button[]{
                 new Button(64, "Klassikaline"),
-                new Button(96, "Muuda taskust"),
+                new Button(96, "Muuda raskusastet"),
                 new Button(128, "Lahku mängust")
         };
+
+        e.getWindow().getFrame().setIconImage(
+                new Image("/icon.png").getImage());
 
         playerEntities = new ArrayList<>();
         entitiesOnScreen = new ArrayList<>();
@@ -144,19 +150,20 @@ public class Main extends Game {
         fonts.add("Romantiques.ttf");
         fonts.add("shanghai.ttf");
 
-        for(String name : fonts) {
+        for (String name : fonts) {
             try {
-                ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getClassLoader().getResourceAsStream("/"+name)));
+                ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getClassLoader().getResourceAsStream("/" + name)));
             } catch (Exception ignored1) {
                 try {
-                    ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getResourceAsStream("/"+name)));
+                    ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getResourceAsStream("/" + name)));
                 } catch (Exception ignored2) {
                     try {
                         ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getClassLoader().getResourceAsStream(name)));
                     } catch (Exception ignored3) {
                         try {
                             ge.registerFont(Font.createFont(Font.PLAIN, this.getClass().getResourceAsStream(name)));
-                        } catch (Exception ignored4) {}
+                        } catch (Exception ignored4) {
+                        }
                     }
                 }
             }
@@ -180,10 +187,10 @@ public class Main extends Game {
         findOnScreenCalled = false;
 
         collisionMap = new CollisionMap();
-        e.getRenderer().setCamX(Integer.MAX_VALUE/2-e.width/2);
-        e.getRenderer().setCamY(Integer.MAX_VALUE/2-e.height/2);
-        player = new Player(e.getRenderer().getCamX()+e.width/2,
-                e.getRenderer().getCamY()+e.height/2);
+        e.getRenderer().setCamX(Integer.MAX_VALUE / 2 - e.width / 2);
+        e.getRenderer().setCamY(Integer.MAX_VALUE / 2 - e.height / 2);
+        player = new Player(e.getRenderer().getCamX() + e.width / 2,
+                e.getRenderer().getCamY() + e.height / 2);
 
         camera = new Camera(e.width, e.height, player);
 
@@ -194,30 +201,32 @@ public class Main extends Game {
 
         Container contentPane = e.getWindow().getFrame().getContentPane();
         contentPane.setCursor(contentPane.getToolkit().createCustomCursor(
-                new BufferedImage( 1, 1, BufferedImage.TYPE_INT_ARGB ),
+                new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB),
                 new Point(),
-                null ));
+                null));
 
         // HERE: Pre-Render game logo
 
         // Old text based logo
         BufferedImage loadedLogo = new Image("/dulekiva.png").getImage();
         double newHeight = 64;
-        double newWidth = (double)loadedLogo.getWidth() /
-                (double)loadedLogo.getHeight() * newHeight;
-        java.awt.Image logo = loadedLogo.getScaledInstance((int)newWidth,
-                (int)newHeight, java.awt.Image.SCALE_FAST);
-        gameLogo = new BufferedImage((int)newWidth, (int)newHeight,
+        double newWidth = (double) loadedLogo.getWidth() /
+                (double) loadedLogo.getHeight() * newHeight;
+        java.awt.Image logo = loadedLogo.getScaledInstance((int) newWidth,
+                (int) newHeight, java.awt.Image.SCALE_FAST);
+        gameLogo = new BufferedImage((int) newWidth, (int) newHeight,
                 BufferedImage.TYPE_INT_ARGB);
-        gameLogo.getGraphics().drawImage(logo, 0,0, null);
+        gameLogo.getGraphics().drawImage(logo, 0, 0, null);
 
         ui = new UI();
 
-        music = soundManager.playSound("startMenuMusic", Clip.LOOP_CONTINUOUSLY, -17.5f);
-        noise = soundManager.playSound("noise", Clip.LOOP_CONTINUOUSLY, -3f);
+        music = soundManager.playSound("startMenuMusic", Clip.LOOP_CONTINUOUSLY);
+        noise = soundManager.playSound("noise", Clip.LOOP_CONTINUOUSLY);
         noise.stop();
         music.loop(Clip.LOOP_CONTINUOUSLY);
         noise.loop(Clip.LOOP_CONTINUOUSLY);
+        noiseVolume = (FloatControl)
+                noise.getControl(FloatControl.Type.MASTER_GAIN);
 
         restart();
 
@@ -231,37 +240,37 @@ public class Main extends Game {
     }
 
     private void loadSounds() {
-        soundManager.addClip("sounds/backgroundMusic.wav", "startMenuMusic");
-        soundManager.addClip("sounds/noiseLow.wav", "noise");
-        soundManager.addClip("sounds/buttonHoverBass.wav", "buttonHover");
-        soundManager.addClip("sounds/buttonPressedBass.wav", "buttonPress");
-        soundManager.addClip("sounds/beeFlyingAway.wav", "flyAway");
+        soundManager.addClip("sounds/backgroundMusic.wav", "startMenuMusic", -2f);
+        soundManager.addClip("sounds/noiseLow.wav", "noise", 5f);
+        soundManager.addClip("sounds/buttonHoverBass.wav", "buttonHover", 5f);
+        soundManager.addClip("sounds/buttonPressedBass.wav", "buttonPress", 5f);
+        soundManager.addClip("sounds/beeFlyingAway.wav", "flyAway", 5f);
 
-        soundManager.addClip("sounds/footsteps/dirt1.wav", "dirt0");
-        soundManager.addClip("sounds/footsteps/dirt2.wav", "dirt1");
-        soundManager.addClip("sounds/footsteps/dirt3.wav", "dirt2");
-        soundManager.addClip("sounds/footsteps/dirt4.wav", "dirt3");
-        soundManager.addClip("sounds/footsteps/dirt5.wav", "dirt4");
+        soundManager.addClip("sounds/footsteps/dirt1.wav", "dirt0", -0.5f);
+        soundManager.addClip("sounds/footsteps/dirt2.wav", "dirt1", -0.5f);
+        soundManager.addClip("sounds/footsteps/dirt3.wav", "dirt2", -0.5f);
+        soundManager.addClip("sounds/footsteps/dirt4.wav", "dirt3", -0.5f);
+        soundManager.addClip("sounds/footsteps/dirt5.wav", "dirt4", -0.5f);
 
-        soundManager.addClip("sounds/footsteps/grass0.wav", "grass0");
-        soundManager.addClip("sounds/footsteps/grass1.wav", "grass1");
+        soundManager.addClip("sounds/footsteps/grass0.wav", "grass0", -4f);
+        soundManager.addClip("sounds/footsteps/grass1.wav", "grass1", -4f);
 
-        soundManager.addClip("sounds/bee.wav", "bee");
-        soundManager.addClip("sounds/beeFlyingAway.wav", "beeFlyingAway");
+        soundManager.addClip("sounds/bee.wav", "bee", 0f);
+        soundManager.addClip("sounds/beeFlyingAway.wav", "beeFlyingAway", 2.5f);
 
-        soundManager.addClip("sounds/tapping.wav", "branchesTouched");
+        soundManager.addClip("sounds/tapping.wav", "branchesTouched", 0f);
 
-        soundManager.addClip("sounds/open.wav", "open");
+        soundManager.addClip("sounds/open.wav", "open", -1f);
 
-        soundManager.addClip("sounds/footsteps/puddle1.wav", "puddle0");
-        soundManager.addClip("sounds/footsteps/puddle2.wav", "puddle1");
-        soundManager.addClip("sounds/footsteps/puddle3.wav", "puddle2");
-        soundManager.addClip("sounds/footsteps/puddle4.wav", "puddle3");
-        soundManager.addClip("sounds/footsteps/puddle5.wav", "puddle4");
+        soundManager.addClip("sounds/footsteps/puddle1.wav", "puddle0", 1f);
+        soundManager.addClip("sounds/footsteps/puddle2.wav", "puddle1", 1f);
+        soundManager.addClip("sounds/footsteps/puddle3.wav", "puddle2", 1f);
+        soundManager.addClip("sounds/footsteps/puddle4.wav", "puddle3", 1f);
+        soundManager.addClip("sounds/footsteps/puddle5.wav", "puddle4", 1f);
 
-        soundManager.addClip("sounds/pickup.wav", "pickup");
-        soundManager.addClip("sounds/nextWave.wav", "nextWave");
-        soundManager.addClip("sounds/gameover.wav", "gameOver");
+        soundManager.addClip("sounds/pickup.wav", "pickup", 6f);
+        soundManager.addClip("sounds/nextWave.wav", "nextWave", 0f);
+        soundManager.addClip("sounds/gameover.wav", "gameOver", 1f);
     }
 
     private void createSpawn() {
@@ -745,7 +754,6 @@ public class Main extends Game {
         }*/
 
         cursor.update(i);
-        e.getWindow().getFrame().setTitle("DuleKiva  FPS: "+e.getFps());
         camera.update();
         camera.apply(core.getRenderer());
 

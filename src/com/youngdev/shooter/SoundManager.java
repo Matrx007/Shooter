@@ -7,6 +7,7 @@ public class SoundManager {
     private javax.sound.sampled.Line.Info lineInfo;
     private HashMap<String, AudioFormat> audioFormats;
     private HashMap<String, Integer> sizes;
+    private HashMap<String, Float> volumes;
     private HashMap<String, DataLine.Info> info;
     private HashMap<String, byte[]> audioData;
 
@@ -15,12 +16,29 @@ public class SoundManager {
         sizes = new HashMap<>();
         info = new HashMap<>();
         audioData = new HashMap<>();
+        volumes = new HashMap<>();
     }
 
-    public void addClip(String file, String name) {
+    public void addClip(String file, String name, float defaultVolume) {
         try {
-            AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(loadStream(
-                    this.getClass().getClassLoader().getResourceAsStream(file)));
+            InputStream stream;
+
+            if((stream = this.getClass().getClassLoader().
+                    getResourceAsStream(file)) == null) {
+                if((stream = Main.class.getClassLoader().
+                        getResourceAsStream(file)) == null) {
+                    if((stream = this.getClass().
+                            getResourceAsStream(file)) == null) {
+                        if((stream = Main.class.
+                                getResourceAsStream(file)) == null) {
+                            return;
+                        }
+                    }
+                }
+            }
+
+            AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(
+                    loadStream(stream));
             AudioFormat af = audioInputStream.getFormat();
             int size = (int) (af.getFrameSize() * audioInputStream.getFrameLength());
             byte[] audio = new byte[size];
@@ -31,6 +49,7 @@ public class SoundManager {
             sizes.put(name, size);
             this.info.put(name, info);
             audioData.put(name, audio);
+            volumes.put(name, defaultVolume);
         } catch (Exception e) {
             System.err.println("Failed to load file \""+name+"\"");
             e.printStackTrace();
@@ -57,6 +76,8 @@ public class SoundManager {
             try {
                 Clip clip = (Clip) AudioSystem.getLine(info.get(name));
                 clip.open(audioFormats.get(name), audioData.get(name), 0, sizes.get(name));
+                FloatControl floatControl = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
+                floatControl.setValue(volumes.get(name));
                 clip.start();
                 return clip;
             } catch (Exception e) {
@@ -75,6 +96,8 @@ public class SoundManager {
                 Clip clip = (Clip) AudioSystem.getLine(info.get(name));
                 clip.loop(loop);
                 clip.open(audioFormats.get(name), audioData.get(name), 0, sizes.get(name));
+                FloatControl floatControl = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
+                floatControl.setValue(volumes.get(name));
                 clip.start();
                 return clip;
             } catch (Exception e) {
@@ -94,7 +117,7 @@ public class SoundManager {
                 Clip clip = (Clip) AudioSystem.getLine(info.get(name));
                 clip.open(audioFormats.get(name), audioData.get(name), 0, sizes.get(name));
                 FloatControl floatControl = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
-                floatControl.setValue(volume);
+                floatControl.setValue(volumes.get(name)+volume);
                 clip.start();
                 return clip;
             } catch (Exception e) {
@@ -114,7 +137,7 @@ public class SoundManager {
                 clip.loop(loop);
                 clip.open(audioFormats.get(name), audioData.get(name), 0, sizes.get(name));
                 FloatControl floatControl = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
-                floatControl.setValue(volume);
+                floatControl.setValue(volumes.get(name)+volume);
                 clip.start();
                 return clip;
             } catch (Exception e) {

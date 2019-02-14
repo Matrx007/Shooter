@@ -143,7 +143,7 @@ public class Fly extends WorldObject {
             double distance = distance(x, y,
                     Main.main.player.x, Main.main.player.y);
             float gain = -Math.max(20f, 80f / (float) distance * 15f);
-            Main.main.soundManager.playSound("flyAway", gain);
+            Main.main.soundManager.playSound("flyAway", gain+5f);
         }
     }
 

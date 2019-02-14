@@ -176,9 +176,12 @@ public class UI {
         if(!gameOverScreen) storedMoney = prevMoney;
 
         // ### HEALTH ###
-        if(player.health != prevHealth) {
+        if(player.health != prevHealth && !Main.startMenuMode &&
+                !gameOverScreen) {
             healthAlive = 1d;
             healthAliveFast = 1d;
+            Main.main.soundManager.playSound("gameOver",
+                    -2.5f);
             Main.main.camera.bluishEffect = 0.5f;
         }
         healthAliveFast *= 0.90d;
@@ -189,7 +192,7 @@ public class UI {
             gameOverScreen = true;
             if(!prevGameOver)
                 Main.main.soundManager.playSound("gameOver",
-                        -5f);
+                        0f);
         }
 
         healthOffsetX = (screenWidth/ 2d - playerX)*-0.75d+screenHeight/10d*7d;

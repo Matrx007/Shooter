@@ -40,12 +40,12 @@ public class ValueScroller {
         mouseHover = AdvancedMath.inRange(i.getMouseX(), i.getMouseY(),
                 0, y, width, 24);
         if(mouseHover && !prevHover) {
-            Main.main.soundManager.playSound("buttonHover", -5f);
+            Main.main.soundManager.playSound("buttonHover");
             hoverVectors.add(new Vec3d(i.getMouseX(), 1d, 1d));
         }
         if(i.isButtonDown(1)) {
             if (mouseHover) {
-                Main.main.soundManager.playSound("buttonPress", -5f);
+                Main.main.soundManager.playSound("buttonPress");
                 selected = true;
             } else {
                 selected = false;
@@ -55,12 +55,12 @@ public class ValueScroller {
             if (i.isKeyDown(KeyEvent.VK_LEFT)) {
                 value -= step;
                 value = Math.max(minValue, value);
-                Main.main.soundManager.playSound("buttonPress", -5f);
+                Main.main.soundManager.playSound("buttonPress");
             }
             if (i.isKeyDown(KeyEvent.VK_RIGHT)) {
                 value += step;
                 value = Math.min(maxValue, value);
-                Main.main.soundManager.playSound("buttonPress", -5f);
+                Main.main.soundManager.playSound("buttonPress");
             }
         }
 
@@ -84,7 +84,10 @@ public class ValueScroller {
 
     public void renderText(Renderer r) {
         Graphics g = r.getG();
-        g.setColor(Color.black);
+        if(selected)
+            g.setColor(new Color(159, 167, 11));
+        else
+            g.setColor(Color.black);
         g.setFont(new Font("Nunito Bold", Font.PLAIN, 16));
         g.drawString(uiText, 8, y+16);
     }
@@ -98,17 +101,17 @@ public class ValueScroller {
                     new Color(255, 255, 255,
                             (int)(vec.y*128d)));
         }
-        if(selected)
-        r.fillRectangle(0, y, width, 24,
-                new Color(255, 255, 255,
-                        32));
+//        if(selected)
+//        r.fillRectangle(0, y, width, 24,
+//                new Color(255, 255, 255,
+//                        32));
 
         // ### VALUE INDICATOR ###
         int width = (int)Math.round((value - minValue)/(maxValue-minValue)*
                 this.width);
-        Color color1 = new Color(0, 0, 0, 0);
+        Color color1 = new Color(0, 0, 0, selected ? 48 : 0);
         Color color2 = new Color(16, 16, 16,
-                selected ? 128 : 64);
+                selected ? 160 : 128);
         GradientPaint gradient =
                 new GradientPaint(0, 0, color1,
                         width, 0, color2);

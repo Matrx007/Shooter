@@ -85,7 +85,7 @@ public class DuleKiva extends WorldObject {
         if(Fly.distance(player.x, player.y, x, y) < 32 && !dead &&
                 shrinkingMultiplier > 0.75d) {
             super.dead = true;
-            Main.main.soundManager.playSound("open", 1, -15f);
+            Main.main.soundManager.playSound("open");
             Main.main.camera.shake(5f);
             for(int i = random.nextInt(15)+15; i >= 0; i--) {
                 Main.main.addEntity(new Coin((int)x, (int)y,

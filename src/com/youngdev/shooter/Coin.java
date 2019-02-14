@@ -54,7 +54,7 @@ public class Coin extends WorldObject {
                 Main.main.player.money += 2;
                 if(System.currentTimeMillis()-lastCoinPickupSound > 50) {
                     lastCoinPickupSound = System.currentTimeMillis();
-                    Main.main.soundManager.playSound("pickup", 0f);
+                    Main.main.soundManager.playSound("pickup");
                     Main.main.coinSoundCounter++;
                 }
             } else {

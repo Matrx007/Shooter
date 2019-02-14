@@ -109,21 +109,21 @@ public class Player extends Healable {
                     // TODO: Play sound depending on player's location
                     if (onPuddle) {
                         Main.main.soundManager.playSound("puddle" +
-                                random.nextInt(5), -10f);
+                                random.nextInt(5));
 //                        Main.main.createWave(x, y);
                     } else if (onPlant) {
                         Main.main.soundManager.playSound("grass" +
-                                ((step / 20 % 2 == 0) ? 1 : 0), -15f);
+                                ((step / 20 % 2 == 0) ? 1 : 0));
                     } else {
                         Main.main.soundManager.playSound("dirt" +
-                                (random.nextInt(4)), -10f);
+                                (random.nextInt(4)));
                     }
                 } else if (!prevOnPuddle && onPuddle) {
                     Main.main.soundManager.playSound("puddle" +
-                            random.nextInt(5), -10f);
+                            random.nextInt(5));
                 } else if (!prevOnPlant && onPlant) {
                     Main.main.soundManager.playSound("grass" +
-                            (random.nextBoolean() ? 1 : 0), -15f);
+                            (random.nextBoolean() ? 1 : 0));
                 }
             } else {
                 step = 0;

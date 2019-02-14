@@ -114,7 +114,7 @@ public class Plant extends WorldObject {
             leave.speed=Math.max(0, leave.speed-0.125);
             leave.addX = (int)(Math.cos(Math.toRadians(leave.step))*2d);
             leave.addY = (int)(Math.sin(Math.toRadians(leave.step))*2d);
-            leave.prevTouch = false;
+            leave.prevTouch = touched;
         });
     }
 

@@ -136,6 +136,12 @@ public class Tree extends WorldObject {
 
     @Override
     public void update(Input input) {
+        if(Main.main.player.mask.isColliding(this.mask)) {
+            Main.main.noiseVolume.setValue(0f);
+        } else {
+            Main.main.noiseVolume.setValue(5f);
+        }
+
 //        collision = false;
 
         /*Iterator<GameObject> it;

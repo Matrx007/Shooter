@@ -1,0 +1,9 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="Shooter:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/Shooter_jar</output-path>
+    <root id="archive" name="Shooter.jar">
+      <element id="module-output" name="Shooter" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/../MatrxEngine/out/artifacts/MatrxEngine_jar/MatrxEngine.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>
