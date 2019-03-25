@@ -116,14 +116,4 @@ public class Arrow extends WorldObject {
             r.fillPolygon(xPs2, yPs2, 4, new Color(255, 255, 240));
         }
     }
-
-    @Override
-    public String shareSend() {
-        return null;
-    }
-
-    @Override
-    public void shareReceive(String s) {
-
-    }
 }

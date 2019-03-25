@@ -90,14 +90,4 @@ public class Puddle extends WorldObject {
     public void render(Renderer r) {
         particles.forEach(o -> o.render(r));
     }
-
-    @Override
-    public String shareSend() {
-        return null;
-    }
-
-    @Override
-    public void shareReceive(String s) {
-
-    }
 }

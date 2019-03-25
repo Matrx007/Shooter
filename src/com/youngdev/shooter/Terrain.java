@@ -72,16 +72,6 @@ public class Terrain extends WorldObject {
         pieces.forEach(obj -> obj.render(r));
     }
 
-    @Override
-    public String shareSend() {
-        return null;
-    }
-
-    @Override
-    public void shareReceive(String s) {
-
-    }
-
     public class Patch {
         public int x, y, size;
         public Color color;

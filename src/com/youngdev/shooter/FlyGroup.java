@@ -150,14 +150,4 @@ public class FlyGroup extends WorldObject {
             flies.get(i).render(r);
         }
     }
-
-    @Override
-    public String shareSend() {
-        return null;
-    }
-
-    @Override
-    public void shareReceive(String s) {
-
-    }
 }

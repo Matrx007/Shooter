@@ -185,25 +185,13 @@ public class Branches extends WorldObject {
 
     @Override
     public void render(Renderer r) {
-        particles.forEach(o -> {
-            o.render(r);
-        });
+        particles.forEach(o -> o.render(r));
 
         if(Main.main.showDebugInfo) {
             r.drawRectangle(mask.x, mask.y,
                     ((Mask.Rectangle) mask).w, ((Mask.Rectangle) mask).h,
                     Color.blue);
         }
-    }
-
-    @Override
-    public String shareSend() {
-        return null;
-    }
-
-    @Override
-    public void shareReceive(String s) {
-
     }
 
     public static double calcGaussian(double x, int pow) {

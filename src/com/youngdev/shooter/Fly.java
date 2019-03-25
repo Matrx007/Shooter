@@ -147,16 +147,6 @@ public class Fly extends WorldObject {
         }
     }
 
-    @Override
-    public String shareSend() {
-        return null;
-    }
-
-    @Override
-    public void shareReceive(String s) {
-
-    }
-
     public static double distance(double x1, double y1, double x2, double y2) {
         return Math.hypot((x1 - x2), (y1 - y2));
     }

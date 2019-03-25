@@ -14,14 +14,4 @@ public class Ghost extends GameObject {
     public void render(Renderer renderer) {
 
     }
-
-    @Override
-    public String shareSend() {
-        return null;
-    }
-
-    @Override
-    public void shareReceive(String s) {
-
-    }
 }

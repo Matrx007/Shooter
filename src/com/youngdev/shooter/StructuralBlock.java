@@ -132,14 +132,4 @@ public class StructuralBlock extends WorldObject {
         particles.forEach(p -> p.render(r));
         r.shift(-x, -y);
     }
-
-    @Override
-    public String shareSend() {
-        return null;
-    }
-
-    @Override
-    public void shareReceive(String s) {
-
-    }
 }

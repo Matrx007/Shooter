@@ -219,16 +219,6 @@ public class Tree extends WorldObject {
         }
     }
 
-    @Override
-    public String shareSend() {
-        return null;
-    }
-
-    @Override
-    public void shareReceive(String s) {
-
-    }
-
     private Rectangle spawnLeaf(int minLeaf, int maxLeaf, int distanceLimit,
                                 int minSize, int maxSize, int offX, int offY,
                                 Color baseColor, int pow) {

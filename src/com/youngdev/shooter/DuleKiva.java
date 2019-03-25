@@ -108,9 +108,9 @@ public class DuleKiva extends WorldObject {
         step+=1;
 
         int prevAngle = (int)angle;
-        angle += Main.toSlowMotion((targetAngle-angle)*0.025d);
+        angle += Main.toSlowMotion((targetAngle-angle)*0.0125d);
         if(Math.abs(angle-targetAngle) < 1) {
-            targetAngle = angle+random.nextInt(2880)-1440;
+            targetAngle = angle+random.nextInt(720)-360;
         }
         stroke = Math.min(Math.abs(8- Math.abs(prevAngle - angle)/2d), 8d);
 
@@ -135,26 +135,18 @@ public class DuleKiva extends WorldObject {
     @Override
     public void render(Renderer r) {
         double[][] points;
-        for (int i = flares.length-1; i >= 0; i--) {
-            double size = (2+i*3)*shrinkingMultiplier;
+        for (int i = flares.length - 1; i >= 0; i--) {
+            double size = (2 + i * 3) * shrinkingMultiplier;
             double a = flares[i]; // Flare's angle
+            double addX = Math.cos(Math.toRadians(size*8+a*4))*4;
+            double addY = Math.cos(Math.toRadians(size*8+a*4))*4;
             points = new double[][]{
-                    Fly.rotatePoint(x - size, y - size, x, y, -a - 90d),
-                    Fly.rotatePoint(x + size, y - size, x, y, -a - 90d),
-                    Fly.rotatePoint(x + size, y + size, x, y, -a - 90d),
-                    Fly.rotatePoint(x - size, y + size, x, y, -a - 90d)
+                    Fly.rotatePoint(x - size - addX, y - size - addY, x, y, -a*2 - 90d),
+                    Fly.rotatePoint(x + size + addX, y - size - addY, x, y, -a*2 - 90d),
+                    Fly.rotatePoint(x + size + addX, y + size + addY, x, y, -a*2 - 90d),
+                    Fly.rotatePoint(x - size - addX, y + size - addY, x, y, -a*2 - 90d)
             };
-            Fly.fillPoly(points, new Color(128-i*24, 32, 32+i*16), r);
+            Fly.fillPoly(points, new Color(128 - i * 24, 64, 32), r);
         }
-    }
-
-    @Override
-    public String shareSend() {
-        return null;
-    }
-
-    @Override
-    public void shareReceive(String s) {
-
     }
 }

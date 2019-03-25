@@ -110,14 +110,4 @@ public class ProjectTile extends WorldObject {
         particles.forEach(p -> p.render(r));
 //        r.fillCircle(scoreX+wiggleX, scoreY+wiggleY, (int)SIZE*2, Color.black);
     }
-
-    @Override
-    public String shareSend() {
-        return null;
-    }
-
-    @Override
-    public void shareReceive(String s) {
-
-    }
 }

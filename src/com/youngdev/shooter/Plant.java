@@ -129,16 +129,6 @@ public class Plant extends WorldObject {
         }
     }
 
-    @Override
-    public String shareSend() {
-        return null;
-    }
-
-    @Override
-    public void shareReceive(String s) {
-
-    }
-
     private Player.Vector4 spawn(int offX, int offY, int numLeaf, int numBloom, int distanceLimit, Color color) {
         int smallestX=Integer.MAX_VALUE, smallestY=Integer.MAX_VALUE, largestX=Integer.MIN_VALUE, largestY=Integer.MIN_VALUE;
 

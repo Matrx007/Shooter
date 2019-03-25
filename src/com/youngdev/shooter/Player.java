@@ -271,16 +271,6 @@ public class Player extends Healable {
 //        g2d.translate((double)-addX, (double)-addY);
     }
 
-    @Override
-    public String shareSend() {
-        return null;
-    }
-
-    @Override
-    public void shareReceive(String s) {
-
-    }
-
     public static class Vector4 {
         public int x1, y1, x2, y2;
 
@@ -366,16 +356,6 @@ public class Player extends Healable {
         @Override
         public void render(Renderer r) {
             renderRays(r);
-        }
-
-        @Override
-        public String shareSend() {
-            return null;
-        }
-
-        @Override
-        public void shareReceive(String s) {
-
         }
     }
 

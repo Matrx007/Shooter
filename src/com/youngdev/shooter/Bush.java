@@ -49,7 +49,7 @@ public class Bush extends WorldObject {
         }
 
 
-        mask = new Mask.Rectangle((double)bounds.x+1, (double)bounds.y+1, bounds.width-2, bounds.height-2);
+        mask = new Mask.Rectangle((double)bounds.x+0, (double)bounds.y+0, bounds.width-1, bounds.height-1);
         this.aabbComponent = new AABBComponent(mask);
     }
 
@@ -75,16 +75,6 @@ public class Bush extends WorldObject {
         leaf.forEach(leave -> {
             if(collision_EffectivelyFinal && !prevCollision) {/* && !this.prevCollision) {*/
                 leave.speed = 12d;
-                if(fliesInside) {
-                    if (spawn) {
-                        for (int i = 0; i < random.nextInt(5) + 3; i++) {
-                            int xx = (int) x + random.nextInt(24) - 12;
-                            int yy = (int) y + random.nextInt(24) - 12;
-                            Main.main.flies.add(new Fly(xx, yy, false));
-                        }
-                        fliesInside = false;
-                    }
-                }
             }
             leave.step+=Main.toSlowMotion(leave.speed);
             leave.speed=Math.max(1, leave.speed-0.125);
@@ -104,16 +94,6 @@ public class Bush extends WorldObject {
                     ((Mask.Rectangle)mask).w, ((Mask.Rectangle)mask).h,
                     Color.red);
         }
-    }
-
-    @Override
-    public String shareSend() {
-        return null;
-    }
-
-    @Override
-    public void shareReceive(String s) {
-
     }
 
     private Rectangle spawnLeaf(int minLeaf, int maxLeaf, int distanceLimit, int offX, int offY) {

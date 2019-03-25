@@ -300,6 +300,10 @@ public class Main extends Game {
                                 Terrain.TYPE_SMALL_ROCKS));
                 }
             }
+
+
+            getAndGenerateChunk(playerLocX, playerLocY).
+                    add(new TutorialDialog(player.x, player.y));
         }
 
         /*getChunkArray(cX, cY).removeIf((o) ->
@@ -1069,8 +1073,9 @@ public class Main extends Game {
         moveChunkEntities.clear();
         visibleChunkEntities.clear();
         visibleChunkObjects.clear();
-        player = new Player(e.getRenderer().getCamX()+e.width/2,
-                e.getRenderer().getCamY()+e.height/2);
+//        player = new Player(e.getRenderer().getCamX()+e.width/2,
+//                e.getRenderer().getCamY()+e.height/2);
+        player = new Player(0xffff, 0xffff);
         camera.target = player;
         camera.bitCrushEffect = 0f;
         random.setSeed(random.nextLong());
@@ -1133,16 +1138,6 @@ public class Main extends Game {
 
             // Restore the previous properties
             g2d.setClip(oldClip);
-        }
-
-        @Override
-        public String shareSend() {
-            return null;
-        }
-
-        @Override
-        public void shareReceive(String s) {
-
         }
     }
 }

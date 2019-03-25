@@ -64,16 +64,6 @@ public class Rocks extends WorldObject {
         }
     }
 
-    @Override
-    public String shareSend() {
-        return null;
-    }
-
-    @Override
-    public void shareReceive(String s) {
-
-    }
-
     public class Piece {
         public int x, y, size, tone;
         public Color baseColor = new Color(70, 70, 70);

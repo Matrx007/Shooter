@@ -333,16 +333,6 @@ public class UniParticle {
         public void render(Renderer r) {
             owner.render(r);
         }
-
-        @Override
-        public String shareSend() {
-            return null;
-        }
-
-        @Override
-        public void shareReceive(String s) {
-
-        }
     }
 
 }

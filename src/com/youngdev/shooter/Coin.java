@@ -129,14 +129,4 @@ public class Coin extends WorldObject {
 
         r.fillPolygon(new int[]{x1, x2, x2, x1}, new int[]{y1+2, y2+2, y2+6, y1+6}, Color.orange);*/
     }
-
-    @Override
-    public String shareSend() {
-        return null;
-    }
-
-    @Override
-    public void shareReceive(String s) {
-
-    }
 }

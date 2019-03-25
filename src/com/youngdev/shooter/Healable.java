@@ -27,14 +27,4 @@ public abstract class Healable extends WorldObject {
 
     public abstract void update(Input i);
     public abstract void render(Renderer r);
-
-    @Override
-    public String shareSend() {
-        return null;
-    }
-
-    @Override
-    public void shareReceive(String s) {
-
-    }
 }
