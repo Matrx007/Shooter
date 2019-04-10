@@ -48,10 +48,7 @@ public class Coin extends WorldObject {
         if(Fly.distance(xD, yD, Main.main.player.x, Main.main.player.y) < 32d && pickable) {
             if(Fly.distance(xD, yD, Main.main.player.x, Main.main.player.y) < 8d) {
                 dead = true;
-                Main.main.player.lastCoinX = xD;
-                Main.main.player.lastCoinY = yD;
-                Main.main.player.coinOverlayAlpha = 1d;
-                Main.main.player.money += 2;
+                Main.main.player.score += 2;
                 if(System.currentTimeMillis()-lastCoinPickupSound > 50) {
                     lastCoinPickupSound = System.currentTimeMillis();
                     Main.main.soundManager.playSound("pickup");

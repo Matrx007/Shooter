@@ -135,7 +135,7 @@ public class Fly extends WorldObject {
     }
 
     private void flyAwaySound() {
-        if(Main.startMenuMode) return;
+        if(Main.notInGame) return;
 
         long time = System.currentTimeMillis();
         if(time-lastSound > 150) {

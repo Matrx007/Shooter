@@ -20,7 +20,7 @@ public class Button {
     public Button(int y, String text) {
         this.y = y;
         this.text = text;
-        width = Main.main.getE().getWidth();
+        width = 192;
         hoverVectors = new ArrayList<>();
     }
 
@@ -30,11 +30,13 @@ public class Button {
         mouseHover = AdvancedMath.inRange(i.getMouseX(), i.getMouseY(),
                 0, y, width, 24);
         if(mouseHover && !prevHover) {
-            Main.main.soundManager.playSound("buttonHover");
-            hoverVectors.add(new Vec3d(i.getMouseX(), 1d, 1d));
+            Main.main.soundManager.playSound("buttonHover", -3f);
+            Main.main.ui.hoverTargetY = y;
         }
+        Main.main.ui.hovering =
+                Main.main.ui.hovering || mouseHover;
         if(mouseHover && i.isButtonDown(1)) {
-            Main.main.soundManager.playSound("buttonPress");
+            Main.main.soundManager.playSound("buttonPress", -3f);
             pressed = true;
         }
 
@@ -42,7 +44,7 @@ public class Button {
         for(;iterator.hasNext();) {
             Vec3d vec = iterator.next();
             vec.y /= 1.05;
-            vec.z -= 0.05;
+            vec.z -= 0.1;
             if(vec.y <= 0.003) {
                 iterator.remove();
             }
@@ -51,22 +53,12 @@ public class Button {
 
     public void renderText(Renderer r) {
         Graphics g = r.getG();
-        g.setColor(Color.black);
+        g.setColor(UI.UI_BACK.darker().darker().darker());
         g.setFont(new Font("Nunito Bold", Font.PLAIN, 16));
         g.drawString(text, 8, y+16);
     }
 
     public void render(Renderer r) {
-        r.absolute();
-        if(mouseHover)
-            r.fillRectangle(0, y, width, 24,
-                    new Color(255, 255, 255, 32));
-        for(Vec3d vec : hoverVectors) {
-            int w = (int)((1 - vec.z)*width*2d);
-            r.fillRectangle((int)vec.x-w/2d, y, w, 24,
-                    new Color(255, 255, 255,
-                            (int)(vec.y*128d)));
-        }
         renderText(r);
     }
 }

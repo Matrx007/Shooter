@@ -8,10 +8,12 @@ import com.sun.javafx.geom.Vec3d;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
+import java.awt.image.BufferedImage;
 import java.text.DecimalFormat;
 import java.util.SplittableRandom;
 
 public class UI {
+    static final Color UI_BACK = new Color(151, 144, 55, 192);
     // ### VARIABLES ###
     private int screenWidth;
     private int screenHeight;
@@ -25,10 +27,12 @@ public class UI {
     private static final Font font2 =
             new Font("Shanghai", Font.PLAIN, 30);
     private double addY;
-    private long prevMoney;
+    private long prevScore;
     private double healthOffsetX;
     private double healthOffsetY;
-    private long storedMoney;
+    private double scoreOffsetX;
+    private double scoreOffsetTargetX;
+    private long storedScore;
 
     // ### HEALTH ###
     private static final Vec2d[] heartPoints = new Vec2d[]{
@@ -57,13 +61,13 @@ public class UI {
 
     // ### GAME OVER ###
     private boolean gameOverScreen;
-    private Button restart;
-    private Button mainMenu;
+    private Button restartButton;
+    private Button mainMenuButton;
     private boolean prevGameOver;
     private SplittableRandom random;
 
     // ### CUSTOM GAME SETTINGS ###
-    public boolean settings;
+    public boolean customize;
     private ValueScroller[] scrollers;
     private Button play;
     float speedMultiplier;
@@ -73,13 +77,27 @@ public class UI {
     public boolean gamePaused;
     private Button[] pauseButtons;
 
+    // ### BACKGROUND ###
+    public double backTargetX;
+    double backX;
+    public double hoverTargetY;
+    private double hoverY;
+    public double hoverAddTargetX;
+    private double hoverAddX;
+    boolean hovering;
+
+    // ### MAIN MENU ###
+    public boolean mainMenu;
+    private Button[] mainMenuOptions;
+    private BufferedImage gameLogo;
+
     public UI() {
-        settings = false;
+        customize = false;
         screenWidth = Main.main.getE().width;
         screenHeight = Main.main.getE().height;
-        restart = new Button(Main.main.getE().getHeight()/2,
+        restartButton = new Button(Main.main.getE().getHeight()/2,
                 "Proovi uuesti");
-        mainMenu = new Button(Main.main.getE().getHeight()/2+32,
+        mainMenuButton = new Button(Main.main.getE().getHeight()/2+32,
                 "Põhimenüü");
         gtMainMenu = new Button(8, "Põhimenüü");
 
@@ -94,6 +112,9 @@ public class UI {
         prevHealth = Main.main.player.health;
         healthAlive = 0d;
         healthAlpha = 1d;
+
+        backTargetX = 0d;
+        backX = 0d;
 
         int startY = Main.main.getE().getHeight()/5;
         int add = 24+2;
@@ -134,7 +155,7 @@ public class UI {
                     }
                 },
                 new ValueScroller(startY+add*4,
-                        "Mängukiirus on $x",
+                        "Mängu kiirus on $x",
                         0.5d, 1.5d, 0.1d,
                         1d) {
                     @Override
@@ -152,6 +173,25 @@ public class UI {
                 new Button(bottom-32, "Lahku mängust")
         };
 
+        // ### MAIN MENU ###
+        mainMenu = true;
+        mainMenuOptions = new Button[]{
+                new Button(64, "Klassikaline"),
+                new Button(96, "Muuda raskusastet"),
+                new Button(128, "Lahku mängust")
+        };
+
+        BufferedImage loadedLogo = new com.engine.libs.rendering.Image(
+                "/com/youngdev/shooter/res/dulekiva.png").getImage();
+        double newHeight = 64;
+        double newWidth = (double) loadedLogo.getWidth() /
+                (double) loadedLogo.getHeight() * newHeight;
+        java.awt.Image logo = loadedLogo.getScaledInstance((int) newWidth,
+                (int) newHeight, java.awt.Image.SCALE_FAST);
+        gameLogo = new BufferedImage((int) newWidth, (int) newHeight,
+                BufferedImage.TYPE_INT_ARGB);
+        gameLogo.getGraphics().drawImage(logo, 0, 0, null);
+
         speedMultiplier = 1f;
     }
 
@@ -162,8 +202,11 @@ public class UI {
         double playerX = player.x - camX;
         double playerY = player.y - camY;
 
+        // ### BACK ###
+        hovering = false;
+
         // ### SCORE ###
-        if(player.money != prevMoney && !gameOverScreen)
+        if(player.score != prevScore && !gameOverScreen)
             addY = 16d;
         addY *= 0.9;
 
@@ -171,12 +214,14 @@ public class UI {
         scoreY = (screenHeight/ 2d - playerY)*-0.75d +
                 screenHeight/5d + addY;
 
-        prevMoney = player.money;
+        prevScore = player.score;
 
-        if(!gameOverScreen) storedMoney = prevMoney;
+        if(!gameOverScreen) storedScore = prevScore;
+
+        scoreOffsetX += (scoreOffsetTargetX - scoreOffsetX) * 0.125d;
 
         // ### HEALTH ###
-        if(player.health != prevHealth && !Main.startMenuMode &&
+        if(player.health != prevHealth && !Main.notInGame &&
                 !gameOverScreen) {
             healthAlive = 1d;
             healthAliveFast = 1d;
@@ -212,39 +257,65 @@ public class UI {
                     heartPointOffsets[j].x))*healthAlive;
         }
 
+        backTargetX = 0;
+
         // ### GAME OVER ###
+        boolean ignoreMain = false;
         if(gameOverScreen) {
+            backTargetX = 192;
+            Main.main.camera.updateValues = false;
             healthAlpha = Math.max(0, healthAlpha-0.05);
+
+            // Effects
             Main.main.camera.blackAndWhiteEffect =
                     (float) StrictMath.min(
                     Main.main.camera.blackAndWhiteEffect
                             + 0.01d, 1d);
+            Main.main.camera.bitCrushEffect  =
+                    (float) StrictMath.min(
+                    Main.main.camera.bitCrushEffect
+                            + 0.01d, 0.125d);
+            // ------
+
             Main.main.player.isDead = true;
             SpeedController.setSpeed(0.25f);
-            restart.update(i);
-            if(restart.pressed) {
+
+
+            // Buttons
+            restartButton.update(i);
+            if(restartButton.pressed) {
                 Main.main.restart();
                 Main.main.camera.bitCrushEffect = 0.5f;
                 gameOverScreen = false;
                 SpeedController.resetMultipliers();
                 SpeedController.setSpeed(1f);
             }
-            mainMenu.update(i);
-            if(mainMenu.pressed) {
+            mainMenuButton.update(i);
+            if(mainMenuButton.pressed) {
+                System.out.println("true");
+                gamePaused = false;
                 Main.main.restart();
-                Main.startMenuMode = true;
+                Main.notInGame = true;
+                mainMenu = true;
                 gameOverScreen = false;
+                ignoreMain = true;
             }
+
+            scoreOffsetTargetX = -screenWidth/4d;
         } else {
+            scoreOffsetTargetX = 0;
+            Main.main.camera.updateValues = true;
             healthAlpha = 1f;
         }
 
         // ### SETTINGS ###
-        if(settings) {
+        if(customize) {
+            backTargetX = 300;
             gtMainMenu.update(i);
 
             if(gtMainMenu.pressed) {
-                settings = false;
+                customize = false;
+                mainMenu = true;
             }
 
             for (int j = 0; j < scrollers.length; j++) {
@@ -257,10 +328,12 @@ public class UI {
                 Main.DuleKivaHaruldus = (int)scrollers[1].value;
                 DuleKiva.SpawnSpeed = scrollers[2].value;
                 Player.MaxHealth = (int)scrollers[3].value;
-                settings = false;
-                Main.startMenuMode = false;
+                customize = false;
+                Main.notInGame = false;
                 Main.main.restart();
                 speedMultiplier = (float)scrollers[4].value;
+                mainMenu = false;
+                Main.notInGame = false;
             }
         }
 
@@ -268,7 +341,7 @@ public class UI {
 
         // ### PAUSE MENU ###
         if(i.isKeyDown(KeyEvent.VK_ESCAPE)) {
-            if(!settings && !Main.startMenuMode) {
+            if(!customize && !Main.notInGame) {
                 if(gamePaused) {
                     gamePaused = false;
                     SpeedController.resetMultipliers();
@@ -278,7 +351,9 @@ public class UI {
                 }
             }
         }
-        if(gamePaused) {
+        if(gamePaused && !ignoreMain) {
+            scoreOffsetTargetX = screenWidth/4d;
+            backTargetX = 192;
             SpeedController.multiply(0f);
             Main.main.camera.blackAndWhiteEffect = Math.min(Main.main.camera.
                     blackAndWhiteEffect+0.05f, 1f);
@@ -294,31 +369,79 @@ public class UI {
             if(pauseButtons[1].pressed) {
                 gamePaused = false;
                 Main.main.restart();
-                Main.startMenuMode = true;
+                Main.notInGame = true;
+                mainMenu = true;
             }
 
             if(pauseButtons[2].pressed) {
                 System.exit(0);
             }
         }
+
+        // ### MAIN MENU ###
+        if(mainMenu && !ignoreMain) {
+            backTargetX = 192;
+            for (Button button : mainMenuOptions) {
+                button.update(i);
+            }
+
+            if(mainMenuOptions[0].pressed) {
+                DuleKiva.SpawnSpeed = 120d;
+                Player.MaxSpeed = 3f;
+                Player.MaxHealth = 5;
+                Main.DuleKivaHaruldus = 10;
+                speedMultiplier = 1f;
+                SpeedController.resetMultipliers();
+                mainMenu = false;
+                Main.notInGame = false;
+            }
+
+            if(mainMenuOptions[1].pressed) {
+                customize = true;
+                mainMenu = false;
+            }
+
+            if(mainMenuOptions[2].pressed) {
+                System.exit(0);
+            }
+        }
+
+        // ### BACKGROUND ###
+        backX += (backTargetX - backX) * 0.1d;
+
+        hoverAddTargetX = hovering ? 1 : 0;
+        hoverAddX += (hoverAddTargetX - hoverAddX) * 0.125d;
+        hoverY += (hoverTargetY - hoverY) * 0.25d;
     }
 
     public void render(Renderer r) {
         Graphics2D g2d = (Graphics2D) r.getG();
         Player player = Main.main.player;
 
-        if(!Main.startMenuMode) {
+        r.fillRectangle(0, 0,
+                (int)Math.round(backX),
+                screenHeight, UI_BACK);
+
+        r.fillRectangle(0, (int)Math.round(hoverY),
+                (int)Math.round(backX),
+                24, new Color(
+                        255, 255, 255,
+                        (int) Math.round(hoverAddX * 32d)));
+
+        if(!Main.notInGame) {
             // ### SCORE ###
             r.setFont(font1);
-            r.drawText(storedMoney + "", scoreX, scoreY, 36 + (int) Math.round(addY),
-                    alignCenter, new Color(26, 29, 0));
+            r.drawText(storedScore + "", scoreX+
+                            Math.round(scoreOffsetX), scoreY,
+                    36 + (int) Math.round(addY),
+                    alignCenter, new Color(16, 16, 16));
 
             // ### HEALTH ###
             double multiply = 1d + healthAliveFast;
             int offsetX = (int) (screenWidth / 2d + healthOffsetX);
             int offsetY = (int) (screenHeight / 4d * 3d + healthOffsetY);
-            int xPoints[] = new int[heartPoints.length];
-            int yPoints[] = new int[heartPoints.length];
+            int[] xPoints = new int[heartPoints.length];
+            int[] yPoints = new int[heartPoints.length];
             for (int i = 0; i < heartPoints.length; i++) {
                 xPoints[i] = offsetX + (int) (heartPoints[i].x * multiply + heartPointOffsets[i].y * 4d);
                 yPoints[i] = offsetY + (int) (heartPoints[i].y * multiply + heartPointOffsets[i].z * 4d);
@@ -335,15 +458,15 @@ public class UI {
             // ### GAME OVER SCREEN ###
             if (gameOverScreen) {
                 r.setFont(font1);
-                r.drawText("GAME OVER", screenWidth / 2d,
-                        80d, 32, alignCenter, Color.black);
-                restart.render(r);
-                mainMenu.render(r);
+                r.drawText("KAOTUS", screenWidth * 0.75d,
+                        80d, 28, alignCenter, Color.black);
+                restartButton.render(r);
+                mainMenuButton.render(r);
             }
         }
         
         // ### SETTINGS ###
-        if(settings){
+        if(customize){
             gtMainMenu.render(r);
             for (int i = 0; i < scrollers.length; i++) {
                 scrollers[i].render(r);
@@ -354,6 +477,17 @@ public class UI {
         // ### PAUSE MENU ###
         if(gamePaused) {
             for (Button button : pauseButtons) button.render(r);
+        }
+
+        // ### MAIN MENU ###
+        if(mainMenu) {
+            for(Button button : mainMenuOptions) {
+                button.render(r);
+            }
+
+            r.drawImage((screenWidth/2d-gameLogo.
+                                    getWidth())/2d, 0,
+                    gameLogo);
         }
     }
 }

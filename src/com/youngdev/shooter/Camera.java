@@ -10,6 +10,7 @@ public class Camera {
     public double cX, cY;
     private double shakeX, shakeY, shakeAmount, mx, my;
     private int width, height;
+    public boolean updateValues;
     public float bluishEffect, bitCrushEffect, blackAndWhiteEffect;
     public GameObject target;
     private Random random;
@@ -26,6 +27,7 @@ public class Camera {
         this.shakeX = 0d;
         this.shakeY = 0d;
         this.shakeAmount = 0f;
+        updateValues = true;
 
         random = new Random();
     }
@@ -34,7 +36,7 @@ public class Camera {
         mx = cX-Main.main.getE().getInput().getRelativeMouseX()+width/2d;
         my = cY-Main.main.getE().getInput().getRelativeMouseY()+height/2d;
 
-        if(Main.startMenuMode) {
+        if(Main.notInGame) {
             cY -= 0.5;
         } else {
             if (shakeAmount != 0) {
@@ -50,13 +52,19 @@ public class Camera {
             cY += ((target.y - cY - height / 2d) * 0.1d);
         }
 
-        bluishEffect += 0.0125f;
-        bluishEffect = (float)AdvancedMath.setRange(
-                bluishEffect, 0d, 1d);
+        if(updateValues) {
+            bluishEffect += 0.0125f;
+            bluishEffect = (float) AdvancedMath.setRange(
+                    bluishEffect, 0d, 1d);
 
-        bitCrushEffect -= 0.005f;
-        bitCrushEffect = (float)AdvancedMath.setRange(
-                bitCrushEffect, 0d, 1d);
+            bitCrushEffect -= 0.005f;
+            bitCrushEffect = (float) AdvancedMath.setRange(
+                    bitCrushEffect, 0d, 1d);
+
+            blackAndWhiteEffect -= 0.0125f;
+            blackAndWhiteEffect = (float) AdvancedMath.setRange(
+                    blackAndWhiteEffect, 0d, 1d);
+        }
     }
 
     public void shake(float amount) {

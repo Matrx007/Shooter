@@ -2,21 +2,19 @@ package com.youngdev.shooter;
 
 import com.engine.libs.game.GameObject;
 import com.engine.libs.game.Mask;
-import com.engine.libs.game.behaviors.AABBCollisionManager;
 import com.engine.libs.input.Input;
 import com.engine.libs.rendering.Renderer;
 
 import java.awt.*;
 import java.util.ArrayList;
-import java.util.Random;
 
-public class Branches extends WorldObject {
+public class Leaf extends WorldObject {
     public ArrayList<UniParticle> particles;
     public final int Type = 12;
     private int smallestX, smallestY, largestX, largestY;
     private Color baseColor0;
 
-    public Branches(int x, int y) {
+    public Leaf(int x, int y) {
         super(15, 2, 14);
 
         this.x = x;
@@ -24,8 +22,8 @@ public class Branches extends WorldObject {
 
         particles = new ArrayList<>();
 
-        // HERE: Generate branches
-        baseColor0 = new Color(77, 40, 37);
+        // HERE: Generate leaf
+        baseColor0 = new Color(51, 120, 47);
         for(int i = random.nextInt(10)+5; i >= 0; i--) {
             double angle = random.nextDouble()*360d;
             double distance = calcGaussian(random.nextDouble(), 8)*40;
@@ -39,24 +37,16 @@ public class Branches extends WorldObject {
     }
 
     public UniParticle createParticle(int addX, int addY) {
-        int tone = random.nextInt(20)-10;
+        int tone = random.nextInt(20)-15;
         Color c = new Color(
                 baseColor0.getRed()+tone,
                 baseColor0.getGreen()+tone,
                 baseColor0.getBlue()+tone
         );
 
-        double length = random.nextDouble()*8d+5;
-        double angle = Math.toRadians(random.nextInt(359));
-        int x1 = (int)(Math.cos(angle)*length);
-        int y1 = (int)(Math.sin(angle)*length);
-        int x2 = (int)(Math.cos(angle-180)*length);
-        int y2 = (int)(Math.sin(angle-180)*length);
-        int width = random.nextInt(2)+2;
-
         UniParticle.Process stepOverProcess = new UniParticle.Process() {
-            private double speedX, speedY, xx, yy, angle, targetAngle;
-            private double xx1, yy1, xx2, yy2;
+            private double speedX, speedY, xx, yy, angle, targetAngle, size;
+            private int x1, y1, x2, y2, x3, y3, x4, y4;
             private Color color;
             private boolean prevCollision;
 
@@ -71,27 +61,36 @@ public class Branches extends WorldObject {
                         baseColor0.getGreen()+tone,
                         baseColor0.getBlue()+tone
                 );
-                this.xx1 = x1;
-                this.yy1 = y1;
-                this.xx2 = x2;
-                this.yy2 = y2;
                 this.angle = random.nextInt(359);
                 targetAngle = angle;
                 prevCollision = false;
+
+                size = random.nextDouble()*3d+3d;
+
+                x1 = (int)(Math.cos(Math.toRadians(angle))*size);
+                y1 = (int)(Math.sin(Math.toRadians(angle))*size);
+                x2 = (int)(Math.cos(Math.toRadians(angle-90))*size);
+                y2 = (int)(Math.sin(Math.toRadians(angle-90))*size);
+                x3 = (int)(Math.cos(Math.toRadians(angle-180))*size);
+                y3 = (int)(Math.sin(Math.toRadians(angle-180))*size);
+                x4 = (int)(Math.cos(Math.toRadians(angle-270))*size);
+                y4 = (int)(Math.sin(Math.toRadians(angle-270))*size);
             }
 
             @Override
             public void render(Renderer r) {
-                r.drawLineWidth(xx+(int)xx1, yy+(int)yy1,
-                        xx+(int)xx2, yy+(int)yy2, width, color);
+                int xx = (int)Math.round(this.xx);
+                int yy = (int)Math.round(this.yy);
+                r.fillPolygon(
+                        new int[]{xx+x1, xx+x2, xx+x3, xx+x4},
+                        new int[]{yy+y1, yy+y2, yy+y3, yy+y4}, color);
             }
 
             @Override
             public void update() {
-//                System.out.println("xx = " + xx);
                 double prevAngle = angle;
-                speedX *= 0.75;
-                speedY *= 0.75;
+                speedX *= 0.85;
+                speedY *= 0.85;
 
                 ArrayList<GameObject> nearEntities = new ArrayList<>();
                 for (GameObject entity : Main.main.visibleChunkEntities) {
@@ -143,11 +142,15 @@ public class Branches extends WorldObject {
                 owner.x = (int)xx;
                 owner.y = (int)yy;
 
-                if(angle != prevAngle) {
-                    xx1 = (Math.cos(Math.toRadians(angle))*length);
-                    yy1 = (Math.sin(Math.toRadians(angle))*length);
-                    xx2 = (Math.cos(Math.toRadians(angle-180))*length);
-                    yy2 = (Math.sin(Math.toRadians(angle-180))*length);
+                if(prevAngle != angle) {
+                    x1 = (int)(Math.cos(Math.toRadians(angle))*size);
+                    y1 = (int)(Math.sin(Math.toRadians(angle))*size);
+                    x2 = (int)(Math.cos(Math.toRadians(angle-90))*size);
+                    y2 = (int)(Math.sin(Math.toRadians(angle-90))*size);
+                    x3 = (int)(Math.cos(Math.toRadians(angle-180))*size);
+                    y3 = (int)(Math.sin(Math.toRadians(angle-180))*size);
+                    x4 = (int)(Math.cos(Math.toRadians(angle-270))*size);
+                    y4 = (int)(Math.sin(Math.toRadians(angle-270))*size);
                 }
             }
         };

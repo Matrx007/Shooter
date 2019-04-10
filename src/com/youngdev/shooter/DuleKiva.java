@@ -91,7 +91,9 @@ public class DuleKiva extends WorldObject {
                 Main.main.addEntity(new Coin((int)x, (int)y,
                         random.nextInt(359)));
             }
+            Main.main.camera.blackAndWhiteEffect = 1f;
             Main.main.camera.bluishEffect = 0.75f;
+            Main.main.camera.bitCrushEffect = 0.25f;
         } else if(Fly.distance(player.x, player.y, x, y) < 400 &&
                 Fly.distance(player.x, player.y, x, y) > 60 &&
                 shrinkingMultiplier > 0.9d) {
@@ -101,7 +103,7 @@ public class DuleKiva extends WorldObject {
             if(waveStep > SpawnSpeed *multiplier) {
                 waveStep = 0;
                 createWave();
-                shrinkingMultiplier = 0.5d;
+                shrinkingMultiplier = 2d;
             }
         }
 
@@ -136,16 +138,19 @@ public class DuleKiva extends WorldObject {
     public void render(Renderer r) {
         double[][] points;
         for (int i = flares.length - 1; i >= 0; i--) {
-            double size = (2 + i * 3) * shrinkingMultiplier;
+            double size = (4 + Math.sqrt(i) * 3) * shrinkingMultiplier;
             double a = flares[i]; // Flare's angle
-            double addX = Math.cos(Math.toRadians(size*8+a*4))*4;
-            double addY = Math.cos(Math.toRadians(size*8+a*4))*4;
+//            double addX = Math.cos(Math.toRadians((int)(size*8)^(int)(a*4)))*4;
+//            double addY = Math.cos(Math.toRadians((int)(size*8)^(int)(a*4)))*4;
+            double addX = 0;
+            double addY = 0;
             points = new double[][]{
                     Fly.rotatePoint(x - size - addX, y - size - addY, x, y, -a*2 - 90d),
                     Fly.rotatePoint(x + size + addX, y - size - addY, x, y, -a*2 - 90d),
                     Fly.rotatePoint(x + size + addX, y + size + addY, x, y, -a*2 - 90d),
                     Fly.rotatePoint(x - size - addX, y + size - addY, x, y, -a*2 - 90d)
             };
+//            r.fillCircle(points[0][0], points[0][1], (int)size, new Color(128 - i * 24, 64, 32));
             Fly.fillPoly(points, new Color(128 - i * 24, 64, 32), r);
         }
     }

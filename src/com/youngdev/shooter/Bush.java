@@ -20,7 +20,7 @@ public class Bush extends WorldObject {
     public boolean collision;
 
     public Bush(int x, int y) {
-        super(11, 11, 1);
+        super(11, 7, 1);
         this.x = x;
         this.y = y;
         this.fliesInside = true;
@@ -31,7 +31,7 @@ public class Bush extends WorldObject {
         collision = false;
 
         // HERE: Bush gen V 1.0
-        Rectangle bounds = spawnLeaf(24, 36, 24,
+        Rectangle bounds = spawnLeaf(24, 36, random.nextInt(16)+16,
                 0, 0);
         if(random.nextInt(6)==1) {
             int numBerries = 5 + random.nextInt(5);
@@ -49,8 +49,8 @@ public class Bush extends WorldObject {
         }
 
 
-        mask = new Mask.Rectangle((double)bounds.x+0, (double)bounds.y+0, bounds.width-1, bounds.height-1);
-        this.aabbComponent = new AABBComponent(mask);
+        mask = new Mask.Rectangle((double)bounds.x, (double)bounds.y, bounds.width, bounds.height);
+        this.aabbComponent = new AABBComponent(mask.expand(-6));
     }
 
     @Override

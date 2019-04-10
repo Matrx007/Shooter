@@ -21,19 +21,25 @@ public class Rocks extends WorldObject {
         this.solid = true;
 
         rocks = new ArrayList<>();
-        int numRocks = random.nextInt(15)+15;
-        int smallestX=Integer.MAX_VALUE, smallestY=Integer.MAX_VALUE, largestX=Integer.MIN_VALUE, largestY=Integer.MIN_VALUE;
+        double maxDistance = random.nextInt(24)+8;
+        int numRocks = (int)(maxDistance*1.5d);
+        int smallestX=Integer.MAX_VALUE,
+                smallestY=Integer.MAX_VALUE,
+                largestX=Integer.MIN_VALUE,
+                largestY=Integer.MIN_VALUE;
         for(int i = 0; i < numRocks; i++) {
             double gaussian = random.nextDouble();
             double angle = random.nextInt(359);
-            double addX = Math.cos(Math.toRadians(angle))*
-                    Tree.calcGaussian(gaussian, 5)*24;
-            double addY = Math.sin(Math.toRadians(angle))*
-                    Tree.calcGaussian(gaussian, 5)*24d;
+            double distance = Tree.calcGaussian(
+                    gaussian, 8)*maxDistance;
+            double addX = Math.cos(Math.toRadians(angle))*distance;
+            double addY = Math.sin(Math.toRadians(angle))*distance;
             int xx = x + (int)Math.round(addX);
             int yy = y + (int)Math.round(addY);
-            int size = random.nextInt(15)+15;
-            rocks.add(new Piece(xx, yy, size, random.nextInt(8)*5));
+            int size = (int)((random.nextInt(15)+15) / 24d * maxDistance);
+            rocks.add(new Piece(xx, yy, size,
+                    (int)(distance/maxDistance*20d)+
+                    random.nextInt(5)+5));
 
             smallestX = Math.min(smallestX, (int)Math.floor(xx-size/2d));
             smallestY = Math.min(smallestY, (int)Math.floor(yy-size/2d));
@@ -44,7 +50,9 @@ public class Rocks extends WorldObject {
         this.mask = new Mask.Rectangle(smallestX, smallestY,
                 largestX-smallestX, largestY-smallestY);
         this.aabbComponent = new AABBComponent(new Mask.Rectangle(
-                smallestX, smallestY, largestX-smallestX, largestY-smallestY));
+                smallestX, smallestY,
+                largestX-smallestX,
+                largestY-smallestY));
     }
 
     @Override
@@ -60,7 +68,9 @@ public class Rocks extends WorldObject {
         }
 
         if(Main.main.showDebugInfo) {
-            r.fillRectangle(aabbComponent.area.x, this.aabbComponent.area.y, ((Mask.Rectangle) aabbComponent.area).w, ((Mask.Rectangle) aabbComponent.area).w, Color.red);
+            r.fillRectangle(aabbComponent.area.x, this.aabbComponent.area.y,
+                    ((Mask.Rectangle) aabbComponent.area).w,
+                    ((Mask.Rectangle) aabbComponent.area).w, Color.red);
         }
     }
 

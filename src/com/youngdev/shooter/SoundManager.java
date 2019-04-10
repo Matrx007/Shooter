@@ -31,6 +31,7 @@ public class SoundManager {
                             getResourceAsStream(file)) == null) {
                         if((stream = Main.class.
                                 getResourceAsStream(file)) == null) {
+                            System.out.println("Failed to load sound: "+name);
                             return;
                         }
                     }

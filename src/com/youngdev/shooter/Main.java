@@ -9,7 +9,6 @@ import com.engine.libs.input.Input;
 import com.engine.libs.math.AdvancedMath;
 import com.engine.libs.rendering.Filter;
 import com.engine.libs.rendering.Image;
-import com.engine.libs.rendering.RenderUtils;
 import com.engine.libs.rendering.Renderer;
 import com.engine.libs.world.CollisionMap;
 import com.sun.javafx.geom.Vec2d;
@@ -43,22 +42,16 @@ public class Main extends Game {
     private static int chunkYTopLeft;
     private static int chunkXBottomRight;
     private static int chunkYBottomRight;
+    static final int numberOfBirdSounds = 20;
     static int width = 320;
     static int height = 180;
-    private boolean findOnScreenBlocked, findOnScreenCalled;
     private boolean usesChunkRenderer;
     boolean showDebugInfo;
     private Random random;
     public Camera camera;
     static CollisionMap collisionMap;
-    static boolean startMenuMode = false;
+    static boolean notInGame = false;
     private BufferedImage gameLogo;
-    private int numButtons;
-    private String[] buttonLabels;
-    private BufferedImage[] buttonImages;
-    private ArrayList[] buttonHoverVectors;
-    private boolean[] buttonPrevInside;
-    private ArrayList<UniParticle> startMenuButtonParticles;
     public ArrayList<Player> playerEntities;
     private Cursor cursor;
     static Color grassColor = new Color(80, 140, 110);
@@ -69,8 +62,7 @@ public class Main extends Game {
     private List<GameObject> structuralBlocks,visibleChunkObjectsTemp;
     List<Fly> flies;
     SoundManager soundManager;
-    private boolean[] startMenuButtons_prevHover;
-    private boolean startMenuModePrev;
+    private boolean notInGamePrev;
     int flySounds;
     private int tick;
     private Area onScreenPuddles;
@@ -78,14 +70,17 @@ public class Main extends Game {
     UI ui;
     ArrayList<Vec2d> entitiesOnScreen;
     public static int DuleKivaHaruldus = 10;
-    private Button[] mainMenuButtons;
 
     // *** SOUNDS ***
     private Clip noise;
     private Clip music;
-    private PuddleRenderer puddleRenderer;
+    private int birdTime;
+    private int birdTimer;
 
     public static void main(String[] args) {
+        System.out.println(Arrays.toString(
+                Rabbit.rotatePoint(68, -208,
+                        0, 0, -15)));
         new Main();
     }
 
@@ -114,14 +109,8 @@ public class Main extends Game {
         // HERE: Init
         e.getWindow().getFrame().setTitle("DuleKiva");
 
-        mainMenuButtons = new Button[]{
-                new Button(64, "Klassikaline"),
-                new Button(96, "Muuda raskusastet"),
-                new Button(128, "Lahku mängust")
-        };
-
         e.getWindow().getFrame().setIconImage(
-                new Image("/icon.png").getImage());
+                new Image("/com/youngdev/shooter/res/icon.png").getImage());
 
         playerEntities = new ArrayList<>();
         entitiesOnScreen = new ArrayList<>();
@@ -129,26 +118,23 @@ public class Main extends Game {
         onScreenPuddles = new Area();
         coinSoundCounter = 0;
 
-        startMenuMode = true;
+        notInGame = true;
         flySounds = 5;
         flySoundCounter = 0;
 
         puddleWaves = new ArrayList<>();
-        puddleRenderer = new PuddleRenderer();
 
         soundManager = new SoundManager();
         loadSounds();
-        startMenuButtons_prevHover = new boolean[numButtons];
-        Arrays.fill(startMenuButtons_prevHover, false);
 
         AABBCollisionManager.MAX_UNSTUCK_TRIES = 32;
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
         ArrayList<String> fonts = new ArrayList<>();
-        fonts.add("press-start.regular.ttf");
-        fonts.add("Nunito-Bold.ttf");
-        fonts.add("Nunito-Light.ttf");
-        fonts.add("Romantiques.ttf");
-        fonts.add("shanghai.ttf");
+        fonts.add("com/youngdev/shooter/res/press-start.regular.ttf");
+        fonts.add("com/youngdev/shooter/res/Nunito-Bold.ttf");
+        fonts.add("com/youngdev/shooter/res/Nunito-Light.ttf");
+        fonts.add("com/youngdev/shooter/res/Romantiques.ttf");
+        fonts.add("com/youngdev/shooter/res/shanghai.ttf");
 
         for (String name : fonts) {
             try {
@@ -183,8 +169,6 @@ public class Main extends Game {
         structuralBlocks = Collections.synchronizedList(new ArrayList<>());
         List<GameObject> addEntities = Collections.synchronizedList(new ArrayList<>());
         coins = Collections.synchronizedList(new ArrayList<>());
-        findOnScreenBlocked = false;
-        findOnScreenCalled = false;
 
         collisionMap = new CollisionMap();
         e.getRenderer().setCamX(Integer.MAX_VALUE / 2 - e.width / 2);
@@ -208,7 +192,7 @@ public class Main extends Game {
         // HERE: Pre-Render game logo
 
         // Old text based logo
-        BufferedImage loadedLogo = new Image("/dulekiva.png").getImage();
+        BufferedImage loadedLogo = new Image("/com/youngdev/shooter/res/dulekiva.png").getImage();
         double newHeight = 64;
         double newWidth = (double) loadedLogo.getWidth() /
                 (double) loadedLogo.getHeight() * newHeight;
@@ -228,6 +212,8 @@ public class Main extends Game {
         noiseVolume = (FloatControl)
                 noise.getControl(FloatControl.Type.MASTER_GAIN);
 
+        birdTime = random.nextInt(60*5);
+
         restart();
 
         e.run();
@@ -240,41 +226,46 @@ public class Main extends Game {
     }
 
     private void loadSounds() {
-        soundManager.addClip("sounds/backgroundMusic.wav", "startMenuMusic", -2f);
-        soundManager.addClip("sounds/noiseLow.wav", "noise", 5f);
-        soundManager.addClip("sounds/buttonHoverBass.wav", "buttonHover", 5f);
-        soundManager.addClip("sounds/buttonPressedBass.wav", "buttonPress", 5f);
-        soundManager.addClip("sounds/beeFlyingAway.wav", "flyAway", 5f);
+        soundManager.addClip("com/youngdev/shooter/res/sounds/backgroundMusic.wav", "startMenuMusic", -2f);
+        soundManager.addClip("com/youngdev/shooter/res/sounds/noiseLow.wav", "noise", 5f);
+        soundManager.addClip("com/youngdev/shooter/res/sounds/buttonHoverBass.wav", "buttonHover", 5f);
+        soundManager.addClip("com/youngdev/shooter/res/sounds/buttonPressedBass.wav", "buttonPress", 5f);
+        soundManager.addClip("com/youngdev/shooter/res/sounds/beeFlyingAway.wav", "flyAway", 5f);
 
-        soundManager.addClip("sounds/footsteps/dirt1.wav", "dirt0", -0.5f);
-        soundManager.addClip("sounds/footsteps/dirt2.wav", "dirt1", -0.5f);
-        soundManager.addClip("sounds/footsteps/dirt3.wav", "dirt2", -0.5f);
-        soundManager.addClip("sounds/footsteps/dirt4.wav", "dirt3", -0.5f);
-        soundManager.addClip("sounds/footsteps/dirt5.wav", "dirt4", -0.5f);
+        soundManager.addClip("com/youngdev/shooter/res/sounds/footsteps/dirt1.wav", "dirt0", -0.5f);
+        soundManager.addClip("com/youngdev/shooter/res/sounds/footsteps/dirt2.wav", "dirt1", -0.5f);
+        soundManager.addClip("com/youngdev/shooter/res/sounds/footsteps/dirt3.wav", "dirt2", -0.5f);
+        soundManager.addClip("com/youngdev/shooter/res/sounds/footsteps/dirt4.wav", "dirt3", -0.5f);
+        soundManager.addClip("com/youngdev/shooter/res/sounds/footsteps/dirt5.wav", "dirt4", -0.5f);
 
-        soundManager.addClip("sounds/footsteps/grass0.wav", "grass0", -4f);
-        soundManager.addClip("sounds/footsteps/grass1.wav", "grass1", -4f);
+        soundManager.addClip("com/youngdev/shooter/res/sounds/footsteps/grass0.wav", "grass0", -6f);
+        soundManager.addClip("com/youngdev/shooter/res/sounds/footsteps/grass1.wav", "grass1", -6f);
 
-        soundManager.addClip("sounds/bee.wav", "bee", 0f);
-        soundManager.addClip("sounds/beeFlyingAway.wav", "beeFlyingAway", 2.5f);
+        soundManager.addClip("com/youngdev/shooter/res/sounds/bee.wav", "bee", 0f);
+        soundManager.addClip("com/youngdev/shooter/res/sounds/beeFlyingAway.wav", "beeFlyingAway", 2.5f);
 
-        soundManager.addClip("sounds/tapping.wav", "branchesTouched", 0f);
+        soundManager.addClip("com/youngdev/shooter/res/sounds/tapping.wav", "branchesTouched", 0f);
 
-        soundManager.addClip("sounds/open.wav", "open", -1f);
+        soundManager.addClip("com/youngdev/shooter/res/sounds/open.wav", "open", -1f);
 
-        soundManager.addClip("sounds/footsteps/puddle1.wav", "puddle0", 1f);
-        soundManager.addClip("sounds/footsteps/puddle2.wav", "puddle1", 1f);
-        soundManager.addClip("sounds/footsteps/puddle3.wav", "puddle2", 1f);
-        soundManager.addClip("sounds/footsteps/puddle4.wav", "puddle3", 1f);
-        soundManager.addClip("sounds/footsteps/puddle5.wav", "puddle4", 1f);
+        soundManager.addClip("com/youngdev/shooter/res/sounds/footsteps/puddle1.wav", "puddle0", 0f);
+        soundManager.addClip("com/youngdev/shooter/res/sounds/footsteps/puddle2.wav", "puddle1", 0f);
+        soundManager.addClip("com/youngdev/shooter/res/sounds/footsteps/puddle3.wav", "puddle2", 0f);
+        soundManager.addClip("com/youngdev/shooter/res/sounds/footsteps/puddle4.wav", "puddle3", 0f);
+        soundManager.addClip("com/youngdev/shooter/res/sounds/footsteps/puddle5.wav", "puddle4", 0f);
 
-        soundManager.addClip("sounds/pickup.wav", "pickup", 6f);
-        soundManager.addClip("sounds/nextWave.wav", "nextWave", 0f);
-        soundManager.addClip("sounds/gameover.wav", "gameOver", 1f);
+        soundManager.addClip("com/youngdev/shooter/res/sounds/pickup.wav", "pickup", 6f);
+        soundManager.addClip("com/youngdev/shooter/res/sounds/nextWave.wav", "nextWave", 0f);
+        soundManager.addClip("com/youngdev/shooter/res/sounds/gameover.wav", "gameOver", 1f);
+
+        for(int i = 0; i < numberOfBirdSounds; i++) {
+            soundManager.addClip("com/youngdev/shooter/res/sounds/birds/birds" +i+".wav",
+                    "birds"+i, 0f);
+        }
     }
 
     private void createSpawn() {
-        if(player != null && !startMenuMode) {
+        if(player != null && !notInGame) {
             int playerLocX = getChunkLocation(
                     (int)player.x, (int)player.y).x;
             int playerLocY = getChunkLocation(
@@ -302,8 +293,9 @@ public class Main extends Game {
             }
 
 
-            getAndGenerateChunk(playerLocX, playerLocY).
-                    add(new TutorialDialog(player.x, player.y));
+            getAndGenerateChunk(playerLocX-1, playerLocY-1).
+                    add(new TutorialDialog(player.x-chunkSize,
+                            player.y-chunkSize));
         }
 
         /*getChunkArray(cX, cY).removeIf((o) ->
@@ -328,7 +320,9 @@ public class Main extends Game {
 
         if(DuleKivaHaruldus == 0 ||
                 random.nextInt(DuleKivaHaruldus) == 0) {
-            chunkEntities.add(new DuleKiva(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY));
+            chunkEntities.add(new DuleKiva(
+                    random.nextInt(chunkSize)+minX,
+                    random.nextInt(chunkSize)+minY));
         }
 
         if(random.nextBoolean()) {
@@ -350,12 +344,20 @@ public class Main extends Game {
             chunk.add(new Terrain(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY, random.nextInt(2)+1));
         }
 
-        if(random.nextInt(4)==1) {
+        if(random.nextInt(2)==1) {
             chunk.add(new Puddle(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY, random.nextInt(2)+2));
         }
 
-        if(random.nextInt(8)==1) {
-            chunk.add(new Branches(random.nextInt(chunkSize)+minX, random.nextInt(chunkSize)+minY));
+        if(random.nextInt(4)==1) {
+            chunk.add(new Branches(
+                    random.nextInt(chunkSize)+minX,
+                    random.nextInt(chunkSize)+minY));
+        }
+
+        if(random.nextInt(2)==1) {
+            chunk.add(new Leaf(
+                    random.nextInt(chunkSize)+minX,
+                    random.nextInt(chunkSize)+minY));
         }
 
         if(random.nextInt(8)==1) {
@@ -374,28 +376,13 @@ public class Main extends Game {
             }
         }
 
-        if(random.nextInt(4)==1) {
+        if(random.nextInt(8)==1) {
             chunkEntities.add(new Rabbit(minX+chunkSize/2, minY+chunkSize/2));
         }
 
-        /*if(random.nextInt(7)==3) {
-            int xx = random.nextInt(chunkSize);
-            int yy = random.nextInt(chunkSize);
-            for(int i = 0; i < random.nextInt(4)+3; i++) {
-                double angle = random.nextInt(359);
-                double distance = random.nextInt(chunkSize/4)+chunkSize/4f;
-                int xxx = minX + xx + (int) (Math.cos(Math.toRadians(angle))*distance);
-                int yyy = minY + yy + (int) (Math.sin(Math.toRadians(angle))*distance);
-//                entities.add(new EnemyBolt(xxx, yyy));
-//                flies.add(new Fly(xxx, yyy));
-//                System.out.println("Spawned a fly at ("+xxx+","+yyy+")");
-            }
-        }*/
-
         if(random.nextInt(10)==1) {
             chunk.add(new Tree(minX + random.nextInt(chunkSize),
-                    minY + random.nextInt(chunkSize), random.nextBoolean() ?
-                    Tree.TYPE_SAVANNA : Tree.TYPE_OAK));
+                    minY + random.nextInt(chunkSize)));
         }
 
         Point loc = new Point(x, y);
@@ -525,7 +512,7 @@ public class Main extends Game {
         ArrayList<GameObject> addQueue = new ArrayList<>();
         visibleChunkEntities.clear();
         entitiesOnScreen.clear();
-        if(!startMenuMode) {
+        if(!notInGame) {
             addQueue.add(player);
         }
 //        addQueue.add(puddleRenderer);
@@ -639,7 +626,7 @@ public class Main extends Game {
             flySoundCounter = 0;
         }
 
-        if(startMenuMode && !ui.settings) {
+        /*if(notInGame && !ui.customize) {
             for (Button button : mainMenuButtons) {
                 button.update(i);
             }
@@ -651,19 +638,18 @@ public class Main extends Game {
                 Main.DuleKivaHaruldus = 10;
                 ui.speedMultiplier = 1f;
                 SpeedController.resetMultipliers();
-                startMenuMode = false;
+                notInGame = false;
             }
 
             if(mainMenuButtons[1].pressed) {
-                ui.settings = true;
+                ui.customize = true;
             }
 
             if(mainMenuButtons[2].pressed) {
                 System.exit(0);
             }
-        } else {
-            ui.update(i);
-        }
+        }*/
+        ui.update(i);
 
         // ### Calculate visible chunks' boundaries ###
         chunkXTopLeft = (int)Math.floor((int)camera.cX/ chunkSize);
@@ -718,7 +704,7 @@ public class Main extends Game {
         });
 
 //        onScreenPuddles.reset();
-        if(!startMenuMode)
+        if(!notInGame)
             player.update(core.getInput());
 
         // ### Update Objects ###
@@ -737,7 +723,7 @@ public class Main extends Game {
                                     visibleAreaMask)) {
                         onScreenPuddles.add(puddleArea);
                     }*/ // Puddle effects
-                } else if (!(obj instanceof Tree) && !(obj instanceof Rocks)) {
+                } else if (!(obj instanceof Rocks)) {
                     double prevX = obj.x;
                     double prevY = obj.y;
                     obj.update(core.getInput());
@@ -777,8 +763,18 @@ public class Main extends Game {
         hoverChunkX=i.getRelativeMouseX()/chunkSize;
         hoverChunkY=i.getRelativeMouseY()/chunkSize;
 
-        if(startMenuModePrev != startMenuMode) {
-            if(startMenuMode) {
+        birdTimer++;
+        if(birdTimer > birdTime) {
+            if(!notInGame) {
+                soundManager.playSound("birds" +
+                        random.nextInt(numberOfBirdSounds), -12f-random.nextFloat()*6f);
+            }
+            birdTime = (int)((random.nextDouble()*2d+0.5d)*60d);
+            birdTimer = 0;
+        }
+
+        if(notInGamePrev != notInGame) {
+            if(notInGame) {
                 // HERE: Go to start menu mode
                 camera.cX =(int)(Integer.MAX_VALUE/8d*7d);
                 camera.cY =(int)(Integer.MAX_VALUE/8d*7d);
@@ -804,7 +800,7 @@ public class Main extends Game {
                 createSpawn();
             }
         }
-        startMenuModePrev = startMenuMode;
+        notInGamePrev = notInGame;
     }
 
     private void takeMegaScreenshot() {
@@ -962,13 +958,41 @@ public class Main extends Game {
 
         r.setFilter(0, duleKivaEffect);
 
+        /*r.setFilter(15, (newC, oldC) -> {
+            double newR = newC.getRed();
+            double newG = newC.getGreen();
+            double newB = newC.getBlue();
+
+            double newAverage = (newR + newG + newB) / 3d;
+
+            double resR;
+            double resG;
+            double resB;
+
+            resR = newAverage * 0.85d + newR * 0.15d;
+            resG = newAverage * 0.85d + newG * 0.15d;
+            resB = newAverage * 0.65d + newB * 0.05d + 255d * 0.3d;
+
+            resR *= 0.35d;
+            resG *= 0.35d;
+            resB *= 0.35d;
+
+            return new Color(
+                    (int) Math.round(resR),
+                    (int) Math.round(resG),
+                    (int) Math.round(resB));
+        });*/
+
         r.setClip(0, 0, e.width, e.height);
 
         r.fillRectangle(0, 0, e.width, e.height, grassColor);
 
         r.relative();
         if (showDebugInfo)
-            r.fillRectangle(hoverChunkX * chunkSize, hoverChunkY * chunkSize, chunkSize, chunkSize, new Color(40, 100, 70));
+            r.fillRectangle(hoverChunkX * chunkSize,
+                    hoverChunkY * chunkSize,
+                    chunkSize, chunkSize,
+                    new Color(40, 100, 70));
 
         // ╔════════════════════════════╗
         // ║ R E N D E R    C H U N K S ║
@@ -997,7 +1021,7 @@ public class Main extends Game {
 //        System.out.println(System.nanoTime()-startingTime);
 
 //        r.setFont(new Font("Press Start Regular", Font.BOLD, 16));
-//        r.drawText(String.valueOf((int) player.money), player.coinOverlayX, player.coinOverlayY - 32, 16,
+//        r.drawText(String.valueOf((int) player.score), player.coinOverlayX, player.coinOverlayY - 32, 16,
 //                Alignment.MIDDLE_CENTER, new Color(40, 250, 140, (int) player.coinOverlayAlpha));
 
         r.absolute();
@@ -1048,7 +1072,7 @@ public class Main extends Game {
         // ╔═══════════════════════════════════╗
         // ║ R E N D E R    M A I N    M E N U ║
         // ╚═══════════════════════════════════╝
-        if(startMenuMode && !ui.settings) {
+        /*if(notInGame && !ui.customize) {
             r.absolute();
             r.drawImage((e.width-gameLogo.getWidth())/2d,
                     0, gameLogo);
@@ -1058,9 +1082,9 @@ public class Main extends Game {
                 button.render(r);
             }
         } else {
-            r.absolute();
-            ui.render(r);
-        }
+        }*/
+        r.absolute();
+        ui.render(r);
 
         r.relative();
         cursor.render(r);
@@ -1075,7 +1099,7 @@ public class Main extends Game {
         visibleChunkObjects.clear();
 //        player = new Player(e.getRenderer().getCamX()+e.width/2,
 //                e.getRenderer().getCamY()+e.height/2);
-        player = new Player(0xffff, 0xffff);
+        player = new Player(Integer.MAX_VALUE/2, Integer.MAX_VALUE/2);
         camera.target = player;
         camera.bitCrushEffect = 0f;
         random.setSeed(random.nextLong());

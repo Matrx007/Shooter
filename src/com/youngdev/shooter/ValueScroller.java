@@ -30,51 +30,50 @@ public class ValueScroller {
         this.minValue = minValue;
         this.maxValue = maxValue;
         this.step = step;
-        width = Main.main.getE().getWidth();
+        width = 192;
         hoverVectors = new ArrayList<>();
         uiText = text.replace("$", getUIValue());
     }
 
+    private double map(double n,
+                       double start1, double end1,
+                       double start2, double end2) {
+        return ((n-start1)/(end1-start1))*(end2-start2)+start2;
+    }
+
     public void update(Input i) {
+        // ### OTHER ###
         boolean prevHover = mouseHover;
         mouseHover = AdvancedMath.inRange(i.getMouseX(), i.getMouseY(),
                 0, y, width, 24);
-        if(mouseHover && !prevHover) {
+        width = (int)Math.round(Main.main.ui.backX);
+
+        // ### ON HOVER ###
+        if(mouseHover && !prevHover && !i.isButton(1)) {
             Main.main.soundManager.playSound("buttonHover");
-            hoverVectors.add(new Vec3d(i.getMouseX(), 1d, 1d));
+            Main.main.ui.hoverTargetY = y;
         }
+        Main.main.ui.hovering =
+                Main.main.ui.hovering || mouseHover;
+        // ### ON CLICK / START HOLDING ###
         if(i.isButtonDown(1)) {
             if (mouseHover) {
                 Main.main.soundManager.playSound("buttonPress");
                 selected = true;
-            } else {
-                selected = false;
-            }
-        }
-        if(selected) {
-            if (i.isKeyDown(KeyEvent.VK_LEFT)) {
-                value -= step;
-                value = Math.max(minValue, value);
-                Main.main.soundManager.playSound("buttonPress");
-            }
-            if (i.isKeyDown(KeyEvent.VK_RIGHT)) {
-                value += step;
-                value = Math.min(maxValue, value);
-                Main.main.soundManager.playSound("buttonPress");
             }
         }
 
-        Iterator<Vec3d> iterator = hoverVectors.iterator();
-        for(;iterator.hasNext();) {
-            Vec3d vec = iterator.next();
-            if(!mouseHover || (vec).y > 0.2d)
-                vec.y /= 1.05;
-            vec.z -= 0.05;
-            if(vec.y <= 0.003) {
-                iterator.remove();
+        // ### VALUE CHANGING / WHILE HOLDING ###
+        if(i.isButton(1)) {
+            if (selected) {
+                value = AdvancedMath.setRange(
+                        map(i.getMouseX(),
+                        0, width, minValue, maxValue),
+                        minValue, maxValue);
             }
-        }
+        } else selected = false;
 
+        // ### TEXT FORMATION ###
         uiText = text.replace("$", getUIValue());
     }
 
@@ -84,42 +83,19 @@ public class ValueScroller {
 
     public void renderText(Renderer r) {
         Graphics g = r.getG();
-        if(selected)
-            g.setColor(new Color(159, 167, 11));
-        else
-            g.setColor(Color.black);
+        g.setColor(new Color(0, 0, 0, selected ? 192 : 128));
         g.setFont(new Font("Nunito Bold", Font.PLAIN, 16));
         g.drawString(uiText, 8, y+16);
     }
 
     public void render(Renderer r) {
-        // ### BACKGROUND ###
-        r.absolute();
-        for(Vec3d vec : hoverVectors) {
-            int w = (int)((1 - vec.z)*width*2d);
-            r.fillRectangle((int)vec.x-w/2d, y, w, 24,
-                    new Color(255, 255, 255,
-                            (int)(vec.y*128d)));
-        }
-//        if(selected)
-//        r.fillRectangle(0, y, width, 24,
-//                new Color(255, 255, 255,
-//                        32));
-
         // ### VALUE INDICATOR ###
         int width = (int)Math.round((value - minValue)/(maxValue-minValue)*
                 this.width);
-        Color color1 = new Color(0, 0, 0, selected ? 48 : 0);
-        Color color2 = new Color(16, 16, 16,
-                selected ? 160 : 128);
-        GradientPaint gradient =
-                new GradientPaint(0, 0, color1,
-                        width, 0, color2);
-        Graphics2D g2d = (Graphics2D) r.getG();
-        Paint oldPaint = g2d.getPaint();
-        g2d.setPaint(gradient);
-        g2d.fillRect(0, y, width, 24);
-        g2d.setPaint(oldPaint);
+        r.fillRectangle(0, y, width, 24,
+                new Color(0, 0, 0, selected ? 64 : 32));
+
+        // ### RENDER TEXT ###
         renderText(r);
     }
 }

@@ -13,7 +13,6 @@ import java.util.Random;
 
 public class Rabbit extends Healable {
 
-    private double speedTick;
     private double direction;
     private double directionTarget;
     double speed;
@@ -28,6 +27,7 @@ public class Rabbit extends Healable {
     private AABBCollisionManager cm;
 
     public static final boolean collideWithOthers = false;
+    private static final double escapeDistance = 96;
 
     public Rabbit(int x, int y) {
         super(8, x, y, 16, 16, 50, 13, 5, false, collideWithOthers);
@@ -39,11 +39,11 @@ public class Rabbit extends Healable {
         cm.unstuck();
 
         escaping = false;
-        speedTick = 0;
+        double speedTick = 0;
         direction = random.nextInt(359);
         directionTarget = random.nextInt(359);
         speed = 0;
-        maxSpeed = 4d;//+random.nextDouble()*2d;
+        maxSpeed = 4d+random.nextDouble();
         speedTarget = maxSpeed;
         movingTime = 0;
         step = 0;
@@ -52,9 +52,9 @@ public class Rabbit extends Healable {
     @Override
     public void update(Input i) {
         step += Main.toSlowMotion(8);
+
         if (escaping) {
-            directionTarget = Fly.angle(x, y, Main.main.player.x, Main.main.player.y) - 180;
-            speedTarget = maxSpeed;
+            directionTarget = Fly.angle(x, y, Main.main.player.x, Main.main.player.y);
         } else {
             if (movingTime < 0) {
                 if (random.nextInt(5) == 1) {
@@ -75,30 +75,13 @@ public class Rabbit extends Healable {
         speed += Main.toSlowMotion((speedTarget - speed) * 0.1);
 
         if (Main.collisionMap.collisionWithExcept(mask, aabbComponent)) {
-//            cm.unstuck();
-            int k = 16;
-            while (Main.collisionMap.collisionWithExcept(mask, aabbComponent)
-                    && k > 0) {
-                ArrayList<Mask> objs =
-                        Main.collisionMap.collisionWithWho(mask);
-                if(objs.size() > 0) {
-                    Mask mask = objs.get(0);
-                    if(mask instanceof Mask.Rectangle) {
-                        double dir = Fly.angle(x, y,
-                                mask.x+((Mask.Rectangle) mask).w/2d,
-                                mask.y+((Mask.Rectangle) mask).h/2d);
-                        double addX = Math.cos(Math.toRadians(dir)) * 8d;
-                        double addY = Math.sin(Math.toRadians(dir)) * 8d;
-
-                        x += addX;
-                        y += addY;
-
-                        this.mask.move(addX, addY);
-                    }
-                }
-                k--;
-            }
+            cm.unstuck();
         }
+
+        escaping = Fly.distance(x, y, Main.main.player.x,
+                Main.main.player.y) < escapeDistance;
+
+
         double spd = Main.toSlowMotion(speed);
         cm.move(Math.cos(Math.toRadians(direction)) * Main.toSlowMotion(
                 (1 - (step % 150) / 150d) * spd * 2d),
